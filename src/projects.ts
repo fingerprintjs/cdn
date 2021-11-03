@@ -1,15 +1,18 @@
 export interface Project {
   /** The name of the NPM package to serve */
   npmName: string
+  /** The versions must go in ascending order */
   versions: ProjectVersion[]
 }
 
 export interface ProjectVersion {
   /** The minimal version to serve. It's included. For example: '3', '3.3', '3.3.0' */
   startVersion?: string
-  /** The first version to not serve. It's not included. */
+  /** The first version to not serve. It isn't included. */
   endVersion?: string
-  /** The files to serve in this version. The keys are the URL paths going after the version. */
+  /**
+   * The files to serve in this version. The keys are the URL paths going after the version, they may include slashes.
+   */
   routes: Record<string, ProjectRoute>
 }
 
@@ -22,7 +25,7 @@ export interface ProjectRedirect {
 }
 
 /**
- * A browser version of the package's main file
+ * A JS script made by converting the package's main file into the specified browser format
  */
 export interface ProjectPackageMainBundle {
   type: 'packageMain'
@@ -33,13 +36,14 @@ export interface ProjectPackageMainBundle {
 export type BundleFormat = 'iife' | 'esm' | 'umd'
 
 /**
- * The keys are the first part of the incoming URL
+ * The keys are the first part of the incoming URL. The keys mayn't include slashes.
  */
 export const projects: Record<string, Project> = {
   fingerprintjs: {
     npmName: '@fingerprintjs/fingerprintjs',
     versions: [
       {
+        startVersion: '3',
         routes: {
           '': { type: 'redirect', target: 'esm.min.js' },
           'iife.js': { type: 'packageMain', format: 'iife', minified: false },

@@ -7,37 +7,57 @@ import { promisify } from 'util'
 import { CloudFrontRequestHandler } from 'aws-lambda'
 import got from 'got'
 import * as tar from 'tar-fs'
+import { makeCacheHeaders, makeCorsHeaders, notFoundStatus, okStatus } from './utils/http'
+import { parseRequestUri } from './router'
 
-export const handler: CloudFrontRequestHandler = async () => {
-  const mainScript = await getPackageMainScript('@fingerprintjs/fingerprintjs', '3.3.0')
-  const now = new Date()
+export const handler: CloudFrontRequestHandler = async (event) => {
+  const request = event.Records[0].cf.request
+
+  if (request.uri === '/') {
+    return {
+      ...okStatus,
+      headers: {
+        ...makeCorsHeaders(),
+        ...makeCacheHeaders(immutableCacheDuration),
+      },
+      body: 'Hello, have a nice day',
+    }
+  }
+
+  const uriData = parseRequestUri(request.uri)
+  if (!uriData) {
+    return {
+      ...notFoundStatus,
+      headers: {
+        ...makeCorsHeaders(),
+        ...makeCacheHeaders(notFoundBrowserCacheDuration, notFoundCdnCacheDuration),
+      },
+      body: `The ${request.uri} path doesn't exist`,
+    }
+  }
+
+  if (uriData.version.requestedType === 'vague') {
+    // todo: Implement the vague version redirect
+    return {
+      status: '501',
+      statusDescription: 'Not Implemented',
+      headers: makeCorsHeaders(),
+      body: 'Coming coon...',
+    }
+  }
+
+  // todo: Return 404 when the given package is not found
+  const mainScript = await getPackageMainScript(uriData.project.npmName, uriData.version.requestedVersion)
   return {
-    status: '200',
+    ...okStatus,
     headers: {
+      ...makeCorsHeaders(),
+      ...makeCacheHeaders(immutableCacheDuration),
       'content-type': [{ value: 'application/javascript; charset=utf-8' }],
-      'cache-control': [{ value: 'public, max-age=31536000' }],
-      'last-modified': [{ value: now.toUTCString() }],
     },
     body: mainScript,
   }
 }
-
-/*
-function parseRequestUri(uri: string): {project: Project, version: ProjectVersion, route: ProjectRoute} | undefined {
-  for (const [projectPath, project] of Object.entries(projects)) {
-    if (!uri.startsWith(`/${projectPath}/`)) {
-      continue
-    }
-
-    const versionsAndRoute = /v([^/]+)\/(.*)/.exec(uri.slice(projectPath.length + 2))
-    if (versionsAndPath) {
-      const [, versionString, routeString]
-    }
-  }
-
-  return undefined
-}
-*/
 
 async function getPackageMainScript(name: string, version: string): Promise<string> {
   const packageDirectory = await downloadPackage(name, version)
@@ -63,6 +83,8 @@ async function getPackageMainScript(name: string, version: string): Promise<stri
 }
 
 async function downloadPackage(name: string, version: string) {
+  // todo: Don't download if already downloaded
+  // todo: Handle downloading errors
   const directory = getPackageDirectory(name, version)
 
   await promisify(stream.pipeline)(
@@ -87,3 +109,10 @@ function getPackageUrl(name: string, version: string, registryUrl = 'https://reg
 function getPackageDirectory(name: string, version: string): string {
   return path.join(os.tmpdir(), 'npm', ...name.split('/'), `@${version}`)
 }
+
+const oneHour = 60 * 60 * 1000
+const oneDay = oneHour * 24
+const oneYear = oneDay * 365
+const immutableCacheDuration = oneYear
+const notFoundBrowserCacheDuration = oneDay
+const notFoundCdnCacheDuration = oneHour
