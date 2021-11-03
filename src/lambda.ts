@@ -1,15 +1,13 @@
-import * as stream from 'stream'
-import * as zlib from 'zlib'
-import * as os from 'os'
 import * as path from 'path'
 import { promises as fs } from 'fs'
-import { promisify } from 'util'
-import { CloudFrontRequestHandler } from 'aws-lambda'
-import got from 'got'
-import * as tar from 'tar-fs'
+import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import { makeCacheHeaders, makeCorsHeaders, notFoundStatus, okStatus } from './utils/http'
 import { parseRequestUri } from './router'
+import { downloadPackage, ErrorName as NpmError } from './npm'
 
+/**
+ * The entrypoint of the lambda function
+ */
 export const handler: CloudFrontRequestHandler = async (event) => {
   const request = event.Records[0].cf.request
 
@@ -26,14 +24,7 @@ export const handler: CloudFrontRequestHandler = async (event) => {
 
   const uriData = parseRequestUri(request.uri)
   if (!uriData) {
-    return {
-      ...notFoundStatus,
-      headers: {
-        ...makeCorsHeaders(),
-        ...makeCacheHeaders(notFoundBrowserCacheDuration, notFoundCdnCacheDuration),
-      },
-      body: `The ${request.uri} path doesn't exist`,
-    }
+    return makeNotFoundResponse(`The ${request.uri} path doesn't exist`)
   }
 
   if (uriData.version.requestedType === 'vague') {
@@ -46,26 +37,35 @@ export const handler: CloudFrontRequestHandler = async (event) => {
     }
   }
 
-  // todo: Return 404 when the given package is not found
-  const mainScript = await getPackageMainScript(uriData.project.npmName, uriData.version.requestedVersion)
-  return {
-    ...okStatus,
-    headers: {
-      ...makeCorsHeaders(),
-      ...makeCacheHeaders(immutableCacheDuration),
-      'content-type': [{ value: 'application/javascript; charset=utf-8' }],
-    },
-    body: mainScript,
+  try {
+    const mainScript = await getPackageMainScript(uriData.project.npmName, uriData.version.requestedVersion)
+    return {
+      ...okStatus,
+      headers: {
+        ...makeCorsHeaders(),
+        ...makeCacheHeaders(immutableCacheDuration),
+        'content-type': [{ value: 'application/javascript; charset=utf-8' }],
+      },
+      body: mainScript,
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === NpmError.NpmNotFound) {
+      return makeNotFoundResponse(`There is no version ${uriData.version.requestedVersion}`)
+    }
+    throw error
   }
 }
 
 async function getPackageMainScript(name: string, version: string): Promise<string> {
   const packageDirectory = await downloadPackage(name, version)
-  const packageJsonContent = await fs.readFile(path.join(packageDirectory, 'package', 'package.json'), 'utf8')
+  const packageJsonContent = await fs.readFile(path.join(packageDirectory, 'package.json'), 'utf8')
   const packageDescription = JSON.parse(packageJsonContent)
 
   for (const relativePath of [packageDescription.module, packageDescription.main]) {
-    const fullPath = path.join(packageDirectory, 'package', ...relativePath.split('/'))
+    if (typeof relativePath !== 'string') {
+      continue
+    }
+    const fullPath = path.join(packageDirectory, ...relativePath.split('/'))
     try {
       return await fs.readFile(fullPath, 'utf8')
     } catch (error) {
@@ -82,32 +82,15 @@ async function getPackageMainScript(name: string, version: string): Promise<stri
   throw new Error('The package has no main file')
 }
 
-async function downloadPackage(name: string, version: string) {
-  // todo: Don't download if already downloaded
-  // todo: Handle downloading errors
-  const directory = getPackageDirectory(name, version)
-
-  await promisify(stream.pipeline)(
-    got.stream(getPackageUrl(name, version)),
-    zlib.createGunzip(),
-    tar.extract(directory, {
-      strict: false,
-      readable: true,
-      writable: true,
-      ignore: (_, header) => !(header?.type === 'file' || header?.type === 'directory'),
-    }),
-  )
-
-  return directory
-}
-
-function getPackageUrl(name: string, version: string, registryUrl = 'https://registry.npmjs.org') {
-  const scopelessName = name.startsWith('@') ? name.split('/', 2)[1] : name
-  return `${registryUrl}/${name}/-/${scopelessName}-${version}.tgz`
-}
-
-function getPackageDirectory(name: string, version: string): string {
-  return path.join(os.tmpdir(), 'npm', ...name.split('/'), `@${version}`)
+function makeNotFoundResponse(message: string): CloudFrontResultResponse {
+  return {
+    ...notFoundStatus,
+    headers: {
+      ...makeCorsHeaders(),
+      ...makeCacheHeaders(notFoundBrowserCacheDuration, notFoundCdnCacheDuration),
+    },
+    body: message,
+  }
 }
 
 const oneHour = 60 * 60 * 1000

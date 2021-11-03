@@ -7,7 +7,7 @@ async function test() {
 
     try {
       console.time('Package download')
-      response = await handler(makeMockEvent('/fingerprintjs/v3'), makeMockContext(), () => undefined)
+      response = await handler(makeMockEvent('/fingerprintjs/v3.0.1'), makeMockContext(), () => undefined)
     } finally {
       console.timeEnd('Package download')
     }
