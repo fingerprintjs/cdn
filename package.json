@@ -4,7 +4,10 @@
     "test": "ts-node --compiler-options '{\"module\": \"CommonJS\"}' src/lambda.test.ts"
   },
   "dependencies": {
+    "@rollup/plugin-node-resolve": "^13.0.6",
     "got": "^11.8.2",
+    "rollup": "^2.59.0",
+    "rollup-plugin-terser": "^7.0.2",
     "tar-fs": "^2.1.1",
     "tslib": "^2.3.1"
   },

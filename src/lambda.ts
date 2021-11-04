@@ -1,5 +1,4 @@
 import * as path from 'path'
-import { promises as fs } from 'fs'
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import {
   makeCacheHeaders,
@@ -12,6 +11,7 @@ import {
 import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataVagueVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
+import buildBundle from './bundler'
 
 /**
  * The entrypoint of the lambda function
@@ -91,16 +91,24 @@ async function handleExactNpmVersion({
     }
   }
 
-  let mainScript: string
+  let packageDirectory: string
 
   try {
-    mainScript = await getPackageMainScript(version.npmPackage, version.requestedVersion)
+    packageDirectory = await downloadPackage(version.npmPackage, version.requestedVersion)
   } catch (error) {
     if (error instanceof Error && error.name === NpmError.NpmNotFound) {
       return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
     }
     throw error
   }
+
+  const code = await buildBundle({
+    packageDirectory,
+    nodeModulesDirectory: path.join(__dirname, '..', 'node_modules'),
+    format: route.format,
+    globalVariableName: route.globalVariableName,
+    minify: route.minified,
+  })
 
   return {
     ...okStatus,
@@ -109,34 +117,8 @@ async function handleExactNpmVersion({
       ...makeCacheHeaders(immutableCacheDuration),
       'content-type': [{ value: 'application/javascript; charset=utf-8' }],
     },
-    body: mainScript,
+    body: code,
   }
-}
-
-async function getPackageMainScript(name: string, version: string): Promise<string> {
-  const packageDirectory = await downloadPackage(name, version)
-  const packageJsonContent = await fs.readFile(path.join(packageDirectory, 'package.json'), 'utf8')
-  const packageDescription = JSON.parse(packageJsonContent)
-
-  for (const relativePath of [packageDescription.module, packageDescription.main]) {
-    if (typeof relativePath !== 'string') {
-      continue
-    }
-    const fullPath = path.join(packageDirectory, ...relativePath.split('/'))
-    try {
-      return await fs.readFile(fullPath, 'utf8')
-    } catch (error) {
-      if (
-        (error as NodeJS.ErrnoException).code === 'ENOENT' || // Means that the file doesn't exist
-        (error as NodeJS.ErrnoException).code === 'EISDIR' // Means that the path is a directory
-      ) {
-        continue
-      }
-      throw error
-    }
-  }
-
-  throw new Error('The package has no main file')
 }
 
 function makeNotFoundResponse(message: string): CloudFrontResultResponse {
@@ -156,5 +138,5 @@ const oneYear = oneDay * 365
 const immutableCacheDuration = oneYear
 const notFoundBrowserCacheDuration = oneDay
 const notFoundCdnCacheDuration = oneHour
-const tempRedirectBrowserCacheDuration = notFoundBrowserCacheDuration
-const tempRedirectCdnCacheDuration = notFoundCdnCacheDuration
+const tempRedirectBrowserCacheDuration = oneDay * 7
+const tempRedirectCdnCacheDuration = oneHour

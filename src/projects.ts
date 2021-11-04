@@ -33,10 +33,13 @@ export interface ProjectRedirect {
 export interface ProjectPackageMainBundle {
   type: 'packageMain'
   format: BundleFormat
-  minified: boolean
+  globalVariableName: string
+  minified?: boolean
 }
 
 export type BundleFormat = 'iife' | 'esm' | 'umd'
+
+const fingerprintJsRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintJS' } as const
 
 /**
  * The keys are the first part of the incoming URL. The keys mayn't include slashes.
@@ -49,12 +52,12 @@ export const projects: Record<string, Project> = {
         versionRange: { start: '3' },
         routes: {
           '': { type: 'redirect', target: 'esm.min.js' },
-          'iife.js': { type: 'packageMain', format: 'iife', minified: false },
-          'iife.min.js': { type: 'packageMain', format: 'iife', minified: true },
-          'esm.js': { type: 'packageMain', format: 'esm', minified: false },
-          'esm.min.js': { type: 'packageMain', format: 'esm', minified: true },
-          'umd.js': { type: 'packageMain', format: 'umd', minified: false },
-          'umd.min.js': { type: 'packageMain', format: 'umd', minified: true },
+          'iife.js': { ...fingerprintJsRouteCommon, format: 'iife' },
+          'iife.min.js': { ...fingerprintJsRouteCommon, format: 'iife', minified: true },
+          'esm.js': { ...fingerprintJsRouteCommon, format: 'esm' },
+          'esm.min.js': { ...fingerprintJsRouteCommon, format: 'esm', minified: true },
+          'umd.js': { ...fingerprintJsRouteCommon, format: 'umd' },
+          'umd.min.js': { ...fingerprintJsRouteCommon, format: 'umd', minified: true },
         },
       },
     ],

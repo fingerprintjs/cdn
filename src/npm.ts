@@ -3,6 +3,7 @@ import * as stream from 'stream'
 import * as zlib from 'zlib'
 import * as path from 'path'
 import * as os from 'os'
+import { promises as fs } from 'fs'
 import got from 'got'
 import * as tar from 'tar-fs'
 import { compareVersions, isStableVersion, isVersionInRange, VersionRange } from './utils/version'
@@ -124,6 +125,7 @@ export function downloadPackage(name: string, version: string): Promise<string> 
 async function downloadPackageRegardless(name: string, version: string): Promise<string> {
   // todo: Handle downloading errors
   const directory = getPackageDirectory(name, version)
+  await fs.rm(directory, { recursive: true, force: true }) // Not necessary, just in case
 
   try {
     await promisify(stream.pipeline)(
@@ -186,5 +188,5 @@ function getPackageTarballUrl(name: string, version: string) {
 }
 
 function getPackageDirectory(name: string, version: string): string {
-  return path.join(os.tmpdir(), 'npm', ...name.split('/'), `@${version}`)
+  return path.join(os.tmpdir(), 'fpjs-npm', ...name.split('/'), `@${version}`)
 }
