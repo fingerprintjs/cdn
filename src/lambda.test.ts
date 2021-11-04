@@ -1,5 +1,8 @@
+/* eslint-disable no-console */
 import { CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
 import { handler } from './lambda'
+
+// todo: Cover everything with tests
 
 async function test() {
   try {
@@ -8,7 +11,7 @@ async function test() {
     try {
       console.time('Package download')
       response = (await handler(
-        makeMockEvent('/fingerprintjs/v3'),
+        makeMockEvent('/fingerprintjs/v3.3.0/esm.min.js'),
         makeMockContext(),
         () => undefined,
       )) as CloudFrontResultResponse
