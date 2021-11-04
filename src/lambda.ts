@@ -1,9 +1,17 @@
 import * as path from 'path'
 import { promises as fs } from 'fs'
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
-import { makeCacheHeaders, makeCorsHeaders, notFoundStatus, okStatus } from './utils/http'
-import { parseRequestUri, UriData } from './router'
+import {
+  makeCacheHeaders,
+  makeCorsHeaders,
+  notFoundStatus,
+  okStatus,
+  permanentRedirectStatus,
+  temporaryRedirectStatus,
+} from './utils/http'
+import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataVagueVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
+import { intersectVersionRanges } from './utils/version'
 
 /**
  * The entrypoint of the lambda function
@@ -26,45 +34,82 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   if (!uriData) {
     return makeNotFoundResponse(`The ${request.uri} path doesn't exist`)
   }
-  if (uriData.version.requestedType === 'vague') {
-    return await handleVagueNpmVersion(uriData)
+
+  // TypeScript doesn't guards the type if `uriData.version.requestedType === 'vague'` is used
+  const { version } = uriData
+  if (version.requestedType === 'vague') {
+    return await handleVagueNpmVersion({ ...uriData, version })
   }
-  return await handleExactNpmVersion(uriData)
+  return await handleExactNpmVersion({ ...uriData, version })
 }
 
-async function handleVagueNpmVersion({ version }: UriData): Promise<CloudFrontResultResponse> {
+async function handleVagueNpmVersion({
+  project,
+  version,
+  route,
+}: UriDataVagueVersion): Promise<CloudFrontResultResponse> {
+  let exactVersion: string
+
   try {
-    const exactVersion = await getPackageGreatestVersion(
+    exactVersion = await getPackageGreatestVersion(
       version.npmPackage,
-      version.startVersion,
-      version.endVersion,
-      version.requestedVersion,
+      intersectVersionRanges(version.versionRange, version.requestedRange),
+      true,
     )
   } catch (error) {
     if (error instanceof Error && error.name === NpmError.NpmNotFound) {
-      return makeNotFoundResponse(`There is no version matching ${version.requestedVersion}.*`)
+      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
     }
     throw error
   }
+
+  const redirectUri = makeRequestUri(project.key, exactVersion, route.type === 'redirect' ? route.target : route.path)
+  return {
+    ...temporaryRedirectStatus,
+    headers: {
+      ...makeCorsHeaders(),
+      ...makeCacheHeaders(tempRedirectBrowserCacheDuration, tempRedirectCdnCacheDuration),
+      location: [{ value: redirectUri }],
+    },
+  }
 }
 
-async function handleExactNpmVersion({ version }: UriData): Promise<CloudFrontResultResponse> {
-  try {
-    const mainScript = await getPackageMainScript(version.npmPackage, version.requestedVersion)
+async function handleExactNpmVersion({
+  project,
+  version,
+  route,
+}: UriDataExactVersion): Promise<CloudFrontResultResponse> {
+  if (route.type === 'redirect') {
+    const redirectUri = makeRequestUri(project.key, version.requestedVersion, route.target)
     return {
-      ...okStatus,
+      ...permanentRedirectStatus,
       headers: {
         ...makeCorsHeaders(),
         ...makeCacheHeaders(immutableCacheDuration),
-        'content-type': [{ value: 'application/javascript; charset=utf-8' }],
+        location: [{ value: redirectUri }],
       },
-      body: mainScript,
     }
+  }
+
+  let mainScript: string
+
+  try {
+    mainScript = await getPackageMainScript(version.npmPackage, version.requestedVersion)
   } catch (error) {
     if (error instanceof Error && error.name === NpmError.NpmNotFound) {
       return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
     }
     throw error
+  }
+
+  return {
+    ...okStatus,
+    headers: {
+      ...makeCorsHeaders(),
+      ...makeCacheHeaders(immutableCacheDuration),
+      'content-type': [{ value: 'application/javascript; charset=utf-8' }],
+    },
+    body: mainScript,
   }
 }
 
@@ -111,3 +156,5 @@ const oneYear = oneDay * 365
 const immutableCacheDuration = oneYear
 const notFoundBrowserCacheDuration = oneDay
 const notFoundCdnCacheDuration = oneHour
+const tempRedirectBrowserCacheDuration = notFoundBrowserCacheDuration
+const tempRedirectCdnCacheDuration = notFoundCdnCacheDuration

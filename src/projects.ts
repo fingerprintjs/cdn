@@ -1,3 +1,5 @@
+import { VersionRange } from './utils/version'
+
 export interface Project {
   /**
    * The versions must go in ascending order.
@@ -9,10 +11,8 @@ export interface Project {
 export interface ProjectVersion {
   /** The name of the NPM package to serve */
   npmPackage: string
-  /** The minimal version to serve. It's included. For example: '3', '3.3', '3.3.0' */
-  startVersion?: string
-  /** The first version to not serve. It isn't included. */
-  endVersion?: string
+  /** The versions to serve */
+  versionRange: VersionRange
   /**
    * The files to serve in this version. The keys are the URL paths going after the version, they may include slashes.
    */
@@ -46,7 +46,7 @@ export const projects: Record<string, Project> = {
     versions: [
       {
         npmPackage: '@fingerprintjs/fingerprintjs',
-        startVersion: '3',
+        versionRange: { start: '3' },
         routes: {
           '': { type: 'redirect', target: 'esm.min.js' },
           'iife.js': { type: 'packageMain', format: 'iife', minified: false },

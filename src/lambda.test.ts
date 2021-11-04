@@ -1,18 +1,22 @@
-import { CloudFrontRequestEvent, Context } from 'aws-lambda'
+import { CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
 import { handler } from './lambda'
 
 async function test() {
   try {
-    let response: unknown
+    let response: CloudFrontResultResponse
 
     try {
       console.time('Package download')
-      response = await handler(makeMockEvent('/fingerprintjs/v3.0.1'), makeMockContext(), () => undefined)
+      response = (await handler(
+        makeMockEvent('/fingerprintjs/v3'),
+        makeMockContext(),
+        () => undefined,
+      )) as CloudFrontResultResponse
     } finally {
       console.timeEnd('Package download')
     }
 
-    console.log(response)
+    console.log(response.status, response.headers, response.body?.slice(0, 1000))
   } catch (error) {
     console.error('Unexpected error')
     console.error(error)

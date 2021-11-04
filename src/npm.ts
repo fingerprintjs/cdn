@@ -5,7 +5,7 @@ import * as path from 'path'
 import * as os from 'os'
 import got from 'got'
 import * as tar from 'tar-fs'
-import { compareVersions, doesVersionMatch, isVersionInRange } from './utils/version'
+import { compareVersions, isStableVersion, isVersionInRange, VersionRange } from './utils/version'
 
 /**
  * Expected errors
@@ -48,9 +48,8 @@ const registryUrl = 'https://registry.npmjs.org'
 
 export async function getPackageGreatestVersion(
   name: string,
-  startVersion?: string,
-  endVersion?: string,
-  expectedVersion?: string,
+  versionRange?: VersionRange,
+  onlyStable?: boolean,
 ): Promise<string> {
   let packageInformation: RegistryPackageShortData
 
@@ -58,7 +57,7 @@ export async function getPackageGreatestVersion(
     packageInformation = await got
       .get(getPackageInformationUrl(name), {
         headers: {
-          Accept: 'application/vnd.npm.install-v1+json', // Names the registry return only the necessary data
+          Accept: 'application/vnd.npm.install-v1+json', // Makes the registry return only the necessary data
         },
       })
       .json()
@@ -71,17 +70,19 @@ export async function getPackageGreatestVersion(
     throw error
   }
 
-  const greatestVersion = findGreatestVersion(
-    Object.keys(packageInformation.versions),
-    startVersion,
-    endVersion,
-    expectedVersion,
-  )
+  const greatestVersion = findGreatestVersion(Object.keys(packageInformation.versions), versionRange, onlyStable)
   if (greatestVersion !== undefined) {
     return greatestVersion
   }
 
-  const error = new Error(`No version of the NPM package matches ${expectedVersion}`)
+  const error = new Error(
+    versionRange?.start || versionRange?.end
+      ? 'No version of the NPM package matches ' +
+        [versionRange?.start && `≥${versionRange.start}`, versionRange?.end && `<${versionRange.end}`]
+          .filter(Boolean)
+          .join(' and ')
+      : 'The NPM package nas no versions',
+  )
   error.name = ErrorName.NpmNotFound
   throw error
 }
@@ -120,9 +121,8 @@ export async function downloadPackage(name: string, version: string): Promise<st
 
 function findGreatestVersion(
   versions: string[],
-  startVersion?: string,
-  endVersion?: string,
-  expectedVersion?: string,
+  versionRange?: VersionRange,
+  onlyStable?: boolean,
 ): string | undefined {
   let greatestVersionIndex: number | undefined
 
@@ -134,8 +134,8 @@ function findGreatestVersion(
     }
 
     if (
-      isVersionInRange(startVersion, versions[i], endVersion) &&
-      (expectedVersion === undefined || doesVersionMatch(expectedVersion, versions[i]))
+      (!onlyStable || isStableVersion(versions[i])) &&
+      (!versionRange || isVersionInRange(versionRange, versions[i]))
     ) {
       if (greatestVersionIndex === undefined || compareVersions(versions[greatestVersionIndex], versions[i]) < 0) {
         greatestVersionIndex = i

@@ -1,3 +1,10 @@
+export interface VersionRange {
+  /** The start version of the range. It's included. If it's undefined, there is no down limit. E.g. '3.2.1' */
+  start?: string | undefined
+  /** The end version of the range. It is not included. If it's undefined, there is no up limit. */
+  end?: string | undefined
+}
+
 /**
  * Compares version strings.
  * Returns:
@@ -37,42 +44,56 @@ export function compareVersions(version1: string, version2: string): -1 | 0 | 1 
   return compareVersions(rest1, rest2)
 }
 
-/**
- * Checks whether the version lies in the version range.
- * The start version is included and the end version is NOT included.
- */
-export function isVersionInRange(
-  startVersion: string | undefined,
-  versionToCheck: string,
-  endVersion: string | undefined,
-): boolean {
+export function isVersionInRange(range: VersionRange, version: string): boolean {
   return (
-    (startVersion === undefined || compareVersions(startVersion, versionToCheck) <= 0) &&
-    (endVersion === undefined || compareVersions(versionToCheck, endVersion) < 0)
+    (range.start === undefined || compareVersions(range.start, version) <= 0) &&
+    (range.end === undefined || compareVersions(version, range.end) < 0)
+  )
+}
+
+export function doVersionRangesIntersect(range1: VersionRange, range2: VersionRange): boolean {
+  return (
+    (range1.start === undefined || range2.end === undefined || compareVersions(range1.start, range2.end) < 0) &&
+    (range2.start === undefined || range1.end === undefined || compareVersions(range2.start, range1.end) < 0)
   )
 }
 
 /**
- * Checks whether the actualVersion can be used as the expectedVersion according to the Semantic Versioning rules
+ * Applies a conjunction operation to all the given version ranges.
+ * I.e. makes such a range that is fully included in all the given ranges.
  */
-export function doesVersionMatch(expectedVersion: string, actualVersion: string): boolean {
-  if (expectedVersion === actualVersion) {
-    return true
+export function intersectVersionRanges(range: VersionRange, ...ranges: VersionRange[]): VersionRange {
+  const result = { ...range }
+  for (const subRange of ranges) {
+    if (subRange.start !== undefined) {
+      result.start =
+        result.start === undefined || compareVersions(result.start, subRange.start) < 0 ? subRange.start : result.start
+    }
+    if (subRange.end !== undefined) {
+      result.end = result.end === undefined || compareVersions(result.end, subRange.end) > 0 ? subRange.end : result.end
+    }
   }
-  if (!/^[\d.]+$/.test(actualVersion)) {
-    // Special versions with `-dev`, `-beta`, etc never match the expected version only in case of full match
-    return false
+  return result
+}
+
+/**
+ * Makes the next closest version of the given version.
+ * The precision is the same. For example, '3.2.1' turns into '3.2.2'.
+ * It it's impossible to know the next version, returns undefined.
+ */
+export function getNextVersion(version: string): string | undefined {
+  const match = /(^.*\.)?(\d+)$/.exec(version)
+  if (!match) {
+    return undefined
   }
-  const [expectedMajorVersion, expectedVersionRest = '0'] = extractFirstVersionPart(expectedVersion)
-  const [actionMajorVersion, actionVersionRest = '0'] = extractFirstVersionPart(actualVersion)
-  if (expectedMajorVersion !== actionMajorVersion) {
-    return false
-  }
-  if (parseInt(expectedMajorVersion) === 0) {
-    // When the major version is 0, the minor version is treated like a major version too
-    return doesVersionMatch(expectedVersionRest, actionVersionRest)
-  }
-  return compareVersions(expectedVersionRest, actionVersionRest) <= 0
+  return `${match[1] || ''}${parseInt(match[2]) + 1}`
+}
+
+/**
+ * Checks whether the version is stable, i.e. contains only unsigned integers split by a point.
+ */
+export function isStableVersion(version: string): boolean {
+  return /^\d+(\.\d+)*$/.test(version)
 }
 
 function extractFirstVersionPart(version: string): [first: string, rest?: string] {
