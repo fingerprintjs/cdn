@@ -28,24 +28,24 @@ export function makeCorsHeaders(): CloudFrontHeaders {
 }
 
 /**
- * Notice: the durations are set in milliseconds like everything else in JavaScript
+ * Note: the times are durations in milliseconds
  */
 export function makeCacheHeaders(
-  browserCacheDuration: number,
-  cdnCacheDuration = browserCacheDuration,
+  browserCacheTime: number,
+  cdnCacheDuration = browserCacheTime,
   durationFluctuation = 0.1,
 ): CloudFrontHeaders {
   // todo: Consider adding ETag
   const headers: CloudFrontHeaders = {}
   const fluctuationMultiplier = 1 - durationFluctuation / 2 + durationFluctuation * Math.random()
-  const cacheControl = ['public', `max-age=${((browserCacheDuration / 1000) * fluctuationMultiplier).toFixed()}`]
+  const cacheControl = ['public', `max-age=${((browserCacheTime / 1000) * fluctuationMultiplier).toFixed()}`]
 
-  if (browserCacheDuration !== cdnCacheDuration) {
+  if (browserCacheTime !== cdnCacheDuration) {
     cacheControl.push(`s-maxage=${applyFluctuation(cdnCacheDuration / 1000, durationFluctuation).toFixed()}`)
 
     // When the browser cache life is longer than the CDN cache life, the "If-Modified" check will always return "true",
     // so the Last-Modified header affects nothing.
-    if (browserCacheDuration < cdnCacheDuration) {
+    if (browserCacheTime < cdnCacheDuration) {
       headers['last-modified'] = [{ value: new Date().toUTCString() }]
     }
   }

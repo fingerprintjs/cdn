@@ -19,7 +19,7 @@ export interface ProjectVersion {
   routes: Record<string, ProjectRoute>
 }
 
-export type ProjectRoute = ProjectRedirect | ProjectPackageMainBundle
+export type ProjectRoute = ProjectRedirect | ProjectPackageMainBundle | ProjectPackageMonitoring
 
 export interface ProjectRedirect {
   type: 'redirect'
@@ -35,6 +35,13 @@ export interface ProjectPackageMainBundle {
   format: BundleFormat
   globalVariableName: string
   minified?: boolean
+}
+
+/**
+ * An empty 200 response. Can be used for monitoring using an AJAX request
+ */
+export interface ProjectPackageMonitoring {
+  type: 'monitoring'
 }
 
 export type BundleFormat = 'iife' | 'esm' | 'umd'
@@ -58,6 +65,7 @@ export const projects: Record<string, Project> = {
           'esm.min.js': { ...fingerprintJsRouteCommon, format: 'esm', minified: true },
           'umd.js': { ...fingerprintJsRouteCommon, format: 'umd' },
           'umd.min.js': { ...fingerprintJsRouteCommon, format: 'umd', minified: true },
+          'npm-monitoring': { type: 'monitoring' },
         },
       },
     ],

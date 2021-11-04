@@ -13,6 +13,17 @@ import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } fro
 import { intersectVersionRanges } from './utils/version'
 import buildBundle from './bundler'
 
+const oneHour = 60 * 60 * 1000
+const oneDay = oneHour * 24
+const oneYear = oneDay * 365
+const immutableCacheTime = oneYear
+const notFoundBrowserCacheTime = oneDay
+const notFoundCdnCacheTime = oneHour
+const tempRedirectBrowserCacheTime = oneDay * 7
+const tempRedirectCdnCacheTime = oneHour
+const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
+const monitoringCdnCacheTime = oneYear
+
 /**
  * The entrypoint of the lambda function
  */
@@ -24,7 +35,7 @@ export const handler: CloudFrontRequestHandler = async (event) => {
       ...okStatus,
       headers: {
         ...makeCorsHeaders(),
-        ...makeCacheHeaders(immutableCacheDuration),
+        ...makeCacheHeaders(immutableCacheTime),
       },
       body: 'Hello, have a nice day',
     }
@@ -68,7 +79,7 @@ async function handleVagueNpmVersion({
     ...temporaryRedirectStatus,
     headers: {
       ...makeCorsHeaders(),
-      ...makeCacheHeaders(tempRedirectBrowserCacheDuration, tempRedirectCdnCacheDuration),
+      ...makeCacheHeaders(tempRedirectBrowserCacheTime, tempRedirectCdnCacheTime),
       location: [{ value: redirectUri }],
     },
   }
@@ -85,8 +96,18 @@ async function handleExactNpmVersion({
       ...permanentRedirectStatus,
       headers: {
         ...makeCorsHeaders(),
-        ...makeCacheHeaders(immutableCacheDuration),
+        ...makeCacheHeaders(immutableCacheTime),
         location: [{ value: redirectUri }],
+      },
+    }
+  }
+
+  if (route.type === 'monitoring') {
+    return {
+      ...permanentRedirectStatus,
+      headers: {
+        ...makeCorsHeaders(),
+        ...makeCacheHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
       },
     }
   }
@@ -114,7 +135,7 @@ async function handleExactNpmVersion({
     ...okStatus,
     headers: {
       ...makeCorsHeaders(),
-      ...makeCacheHeaders(immutableCacheDuration),
+      ...makeCacheHeaders(immutableCacheTime),
       'content-type': [{ value: 'application/javascript; charset=utf-8' }],
     },
     body: code,
@@ -126,17 +147,8 @@ function makeNotFoundResponse(message: string): CloudFrontResultResponse {
     ...notFoundStatus,
     headers: {
       ...makeCorsHeaders(),
-      ...makeCacheHeaders(notFoundBrowserCacheDuration, notFoundCdnCacheDuration),
+      ...makeCacheHeaders(notFoundBrowserCacheTime, notFoundCdnCacheTime),
     },
     body: message,
   }
 }
-
-const oneHour = 60 * 60 * 1000
-const oneDay = oneHour * 24
-const oneYear = oneDay * 365
-const immutableCacheDuration = oneYear
-const notFoundBrowserCacheDuration = oneDay
-const notFoundCdnCacheDuration = oneHour
-const tempRedirectBrowserCacheDuration = oneDay * 7
-const tempRedirectCdnCacheDuration = oneHour
