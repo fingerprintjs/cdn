@@ -43,6 +43,7 @@ export function makeCacheHeaders(
     cacheControl.push(`s-maxage=${applyFluctuation(cdnCacheDuration / 1000, durationFluctuation).toFixed()}`)
   }
   return {
+    // todo: Consider adding ETag
     'cache-control': [{ value: cacheControl.join(', ') }],
     'last-modified': [{ value: new Date().toUTCString() }],
   }

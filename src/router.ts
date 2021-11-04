@@ -1,9 +1,9 @@
 import { Project, ProjectRoute, projects, ProjectVersion } from './projects'
-import { isVersionInRange } from './utils/version'
+import { doesVersionMatch } from './utils/version'
 
-export interface URIData {
+export interface UriData {
   project: Project & { key: string }
-  version: ProjectVersion & { requestedType: 'explicit' | 'vague'; requestedVersion: string }
+  version: ProjectVersion & { requestedType: 'exact' | 'vague'; requestedVersion: string }
   route: ProjectRoute & { path: string }
 }
 
@@ -11,7 +11,7 @@ export interface URIData {
  * Parses a URI of an incoming request.
  * The URI is expected to always start with a slash.
  */
-export function parseRequestUri(uri: string): URIData | undefined {
+export function parseRequestUri(uri: string): UriData | undefined {
   const uriMatches = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
   if (!uriMatches) {
     return undefined
@@ -27,7 +27,11 @@ export function parseRequestUri(uri: string): URIData | undefined {
 
   // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
   for (let i = project.versions.length - 1; i >= 0; --i) {
-    if (isVersionInRange(project.versions[i].startVersion, rawVersion, project.versions[i].endVersion)) {
+    const { startVersion, endVersion } = project.versions[i]
+    if (
+      (startVersion === undefined || doesVersionMatch(startVersion, rawVersion)) &&
+      (endVersion === undefined || !doesVersionMatch(endVersion, rawVersion))
+    ) {
       version = project.versions[i]
       break
     }
@@ -44,7 +48,7 @@ export function parseRequestUri(uri: string): URIData | undefined {
 
   return {
     project: { ...project, key: projectKey },
-    version: { ...version, requestedType: isVagueVersion ? 'vague' : 'explicit', requestedVersion: rawVersion },
+    version: { ...version, requestedType: isVagueVersion ? 'vague' : 'exact', requestedVersion: rawVersion },
     route: { ...route, path: routePath },
   }
 }

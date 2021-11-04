@@ -1,11 +1,14 @@
 export interface Project {
-  /** The name of the NPM package to serve */
-  npmName: string
-  /** The versions must go in ascending order */
+  /**
+   * The versions must go in ascending order.
+   * If a URL matches 2 versions, the latter will be used.
+   */
   versions: ProjectVersion[]
 }
 
 export interface ProjectVersion {
+  /** The name of the NPM package to serve */
+  npmPackage: string
   /** The minimal version to serve. It's included. For example: '3', '3.3', '3.3.0' */
   startVersion?: string
   /** The first version to not serve. It isn't included. */
@@ -40,9 +43,9 @@ export type BundleFormat = 'iife' | 'esm' | 'umd'
  */
 export const projects: Record<string, Project> = {
   fingerprintjs: {
-    npmName: '@fingerprintjs/fingerprintjs',
     versions: [
       {
+        npmPackage: '@fingerprintjs/fingerprintjs',
         startVersion: '3',
         routes: {
           '': { type: 'redirect', target: 'esm.min.js' },

@@ -2,8 +2,8 @@ import * as path from 'path'
 import { promises as fs } from 'fs'
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import { makeCacheHeaders, makeCorsHeaders, notFoundStatus, okStatus } from './utils/http'
-import { parseRequestUri } from './router'
-import { downloadPackage, ErrorName as NpmError } from './npm'
+import { parseRequestUri, UriData } from './router'
+import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 
 /**
  * The entrypoint of the lambda function
@@ -26,19 +26,31 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   if (!uriData) {
     return makeNotFoundResponse(`The ${request.uri} path doesn't exist`)
   }
-
   if (uriData.version.requestedType === 'vague') {
-    // todo: Implement the vague version redirect
-    return {
-      status: '501',
-      statusDescription: 'Not Implemented',
-      headers: makeCorsHeaders(),
-      body: 'Coming coon...',
-    }
+    return await handleVagueNpmVersion(uriData)
   }
+  return await handleExactNpmVersion(uriData)
+}
 
+async function handleVagueNpmVersion({ version }: UriData): Promise<CloudFrontResultResponse> {
   try {
-    const mainScript = await getPackageMainScript(uriData.project.npmName, uriData.version.requestedVersion)
+    const exactVersion = await getPackageGreatestVersion(
+      version.npmPackage,
+      version.startVersion,
+      version.endVersion,
+      version.requestedVersion,
+    )
+  } catch (error) {
+    if (error instanceof Error && error.name === NpmError.NpmNotFound) {
+      return makeNotFoundResponse(`There is no version matching ${version.requestedVersion}.*`)
+    }
+    throw error
+  }
+}
+
+async function handleExactNpmVersion({ version }: UriData): Promise<CloudFrontResultResponse> {
+  try {
+    const mainScript = await getPackageMainScript(version.npmPackage, version.requestedVersion)
     return {
       ...okStatus,
       headers: {
@@ -50,7 +62,7 @@ export const handler: CloudFrontRequestHandler = async (event) => {
     }
   } catch (error) {
     if (error instanceof Error && error.name === NpmError.NpmNotFound) {
-      return makeNotFoundResponse(`There is no version ${uriData.version.requestedVersion}`)
+      return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
     }
     throw error
   }

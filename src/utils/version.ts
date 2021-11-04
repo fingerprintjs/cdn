@@ -52,6 +52,29 @@ export function isVersionInRange(
   )
 }
 
+/**
+ * Checks whether the actualVersion can be used as the expectedVersion according to the Semantic Versioning rules
+ */
+export function doesVersionMatch(expectedVersion: string, actualVersion: string): boolean {
+  if (expectedVersion === actualVersion) {
+    return true
+  }
+  if (!/^[\d.]+$/.test(actualVersion)) {
+    // Special versions with `-dev`, `-beta`, etc never match the expected version only in case of full match
+    return false
+  }
+  const [expectedMajorVersion, expectedVersionRest = '0'] = extractFirstVersionPart(expectedVersion)
+  const [actionMajorVersion, actionVersionRest = '0'] = extractFirstVersionPart(actualVersion)
+  if (expectedMajorVersion !== actionMajorVersion) {
+    return false
+  }
+  if (parseInt(expectedMajorVersion) === 0) {
+    // When the major version is 0, the minor version is treated like a major version too
+    return doesVersionMatch(expectedVersionRest, actionVersionRest)
+  }
+  return compareVersions(expectedVersionRest, actionVersionRest) <= 0
+}
+
 function extractFirstVersionPart(version: string): [first: string, rest?: string] {
   const pointIndex = version.indexOf('.')
   return pointIndex === -1 ? [version] : [version.slice(0, pointIndex), version.slice(pointIndex + 1)]
