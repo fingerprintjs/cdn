@@ -46,6 +46,19 @@ interface RegistryPackageShortData {
 
 const registryUrl = 'https://registry.npmjs.org'
 
+/**
+ * The keys are the package names and versions separated by `@`.
+ * The values are downloading promises that resolve with the path to the directory with the extracted packages.
+ *
+ * The packages that may already been downloading before running this code are ignored because they can be corrupt.
+ *
+ * 512MB of temporary storage available for AWS lambdas should be enough for everything, so we don't clear the cache.
+ */
+const packageDownloads = new Map<string, Promise<string>>()
+
+/**
+ * Fetches the number of the latest package version from an NPM registry
+ */
 export async function getPackageGreatestVersion(
   name: string,
   versionRange?: VersionRange,
@@ -90,8 +103,25 @@ export async function getPackageGreatestVersion(
 /**
  * Downloads the NPM package and returns the directory location of the extracted package files
  */
-export async function downloadPackage(name: string, version: string): Promise<string> {
-  // todo: Don't download if already downloaded
+export function downloadPackage(name: string, version: string): Promise<string> {
+  const cacheKey = `${name}@${version}`
+  let downloadPromise = packageDownloads.get(cacheKey)
+
+  if (!downloadPromise) {
+    downloadPromise = downloadPackageRegardless(name, version).catch((error) => {
+      packageDownloads.delete(cacheKey)
+      throw error
+    })
+    packageDownloads.set(cacheKey, downloadPromise)
+  }
+
+  return downloadPromise
+}
+
+/**
+ * Downloads the NPM package despite the cache and returns the directory location of the extracted package files
+ */
+async function downloadPackageRegardless(name: string, version: string): Promise<string> {
   // todo: Handle downloading errors
   const directory = getPackageDirectory(name, version)
 
