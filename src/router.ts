@@ -25,7 +25,7 @@ export type UriDataVagueVersion = UriData & { version: VagueVersion }
  * The URI is expected to always start with a slash.
  */
 export function parseRequestUri(uri: string): UriData | undefined {
-  const uriMatches = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
+  const uriMatches = /^\/([^/]*)\/v([^/]{1,16})(?:\/(.+))?$/.exec(uri)
   if (!uriMatches) {
     return undefined
   }

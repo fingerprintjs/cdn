@@ -2,17 +2,16 @@ import { promisify } from 'util'
 import * as stream from 'stream'
 import * as zlib from 'zlib'
 import * as path from 'path'
-import * as os from 'os'
-import { promises as fs } from 'fs'
 import got from 'got'
 import * as tar from 'tar-fs'
 import { compareVersions, isStableVersion, isVersionInRange, VersionRange } from './utils/version'
+import { makeTemporaryDirectory } from './utils/filesystem'
 
 /**
  * Expected errors
  */
 export const enum ErrorName {
-  /** The package or its version don't exist on NPM */
+  /** The package or its version don't exist on the NPM registry */
   NpmNotFound = 'npmNotFound',
 }
 
@@ -124,8 +123,7 @@ export function downloadPackage(name: string, version: string): Promise<string> 
  */
 async function downloadPackageRegardless(name: string, version: string): Promise<string> {
   // todo: Handle downloading errors
-  const directory = getPackageDirectory(name, version)
-  await fs.rm(directory, { recursive: true, force: true }) // Not necessary, just in case
+  const directory = await makeTemporaryDirectory()
 
   try {
     await promisify(stream.pipeline)(
@@ -179,14 +177,22 @@ function findGreatestVersion(
 }
 
 function getPackageInformationUrl(name: string) {
-  return `${registryUrl}/${name}`
+  // Sanitize the package name strictly just in case
+  if (name.startsWith('@')) {
+    const slashPosition = name.indexOf('/')
+    if (slashPosition !== -1) {
+      return [
+        registryUrl,
+        `@${encodeURIComponent(name.slice(1, slashPosition))}`,
+        encodeURIComponent(name.slice(slashPosition + 1)),
+      ].join('/')
+    }
+  }
+  return `${registryUrl}/${encodeURIComponent(name)}`
 }
 
 function getPackageTarballUrl(name: string, version: string) {
+  // Sanitize the version because it can come from the user input
   const scopelessName = name.startsWith('@') ? name.split('/', 2)[1] : name
-  return `${registryUrl}/${name}/-/${scopelessName}-${version}.tgz`
-}
-
-function getPackageDirectory(name: string, version: string): string {
-  return path.join(os.tmpdir(), 'fpjs-npm', ...name.split('/'), `@${version}`)
+  return `${getPackageInformationUrl(name)}/-/${encodeURIComponent(scopelessName)}-${encodeURIComponent(version)}.tgz`
 }

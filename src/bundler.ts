@@ -1,9 +1,9 @@
-import { createReadStream, promises as fs } from 'fs'
+import { promises as fs } from 'fs'
 import * as path from 'path'
-import * as os from 'os'
 import * as rollup from 'rollup'
 import { nodeResolve as rollupNodeResolve } from '@rollup/plugin-node-resolve'
 import { terser as terserPlugin } from 'rollup-plugin-terser'
+import { makeTemporaryDirectory, readFirstCharacters } from './utils/filesystem'
 
 interface Options {
   /** The absolute path of the directory that holds the package to bundle. There must by package.json in the root. */
@@ -44,30 +44,22 @@ async function withSandbox<T>(
   nodeModules: string[],
   action: (sandboxDirectory: string, packageDirectory: string) => Promise<T> | T,
 ) {
-  let sandboxDirectory: string
-  for (;;) {
-    sandboxDirectory = path.join(os.tmpdir(), `fpjs-${Math.random()}`)
-    try {
-      await fs.lstat(sandboxDirectory)
-    } catch (error) {
-      // Means that the directory doesn't exist, so we can make a directory here
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        break
-      }
-      throw error
-    }
-  }
+  const sandboxDirectory = await makeTemporaryDirectory()
 
   try {
-    await fs.mkdir(path.join(sandboxDirectory, 'node_modules'), { recursive: true })
+    const rootDirectory = path.join(__dirname, '..')
     const packageSandboxDirectory = path.join(sandboxDirectory, 'package')
 
     await Promise.all([
       fs.symlink(packageDirectory, packageSandboxDirectory, 'dir'),
-      ...nodeModules.map((name) => {
-        const moduleSubdir = path.join('node_modules', ...name.split('/'))
-        return fs.symlink(path.join(__dirname, '..', moduleSubdir), path.join(sandboxDirectory, moduleSubdir), 'dir')
-      }),
+      fs.mkdir(path.join(sandboxDirectory, 'node_modules')).then(() =>
+        Promise.all(
+          nodeModules.map((name) => {
+            const moduleSubdir = path.join('node_modules', ...name.split('/'))
+            return fs.symlink(path.join(rootDirectory, moduleSubdir), path.join(sandboxDirectory, moduleSubdir), 'dir')
+          }),
+        ),
+      ),
     ])
 
     return await action(sandboxDirectory, packageSandboxDirectory)
@@ -141,24 +133,7 @@ async function buildCodeBody(
 }
 
 async function getCodeBanner(filePath: string) {
-  let fileContent = ''
-  const maxBannerLength = 1024
-  const readStream = createReadStream(filePath, { encoding: 'utf8', highWaterMark: maxBannerLength })
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      readStream.on('data', (chunk) => {
-        fileContent += chunk
-        if (fileContent.length >= maxBannerLength) {
-          fileContent = fileContent.slice(0, maxBannerLength)
-          resolve()
-        }
-      })
-      readStream.on('error', reject)
-    })
-  } finally {
-    readStream.close()
-  }
+  const fileContent = await readFirstCharacters(filePath, 1024)
 
   // The expression matches either a group of //-comments with no empty lines in between, or a /**/ comment.
   // The comments are expected to stand at the start of the file.
