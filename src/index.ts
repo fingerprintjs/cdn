@@ -103,7 +103,7 @@ async function handleExactNpmVersion({
 
   if (route.type === 'monitoring') {
     return {
-      ...permanentRedirectStatus,
+      ...okStatus,
       headers: {
         ...makeCorsHeaders(),
         ...makeCacheHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
