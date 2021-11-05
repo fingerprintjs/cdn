@@ -4,7 +4,6 @@ import * as os from 'os'
 import * as rollup from 'rollup'
 import { nodeResolve as rollupNodeResolve } from '@rollup/plugin-node-resolve'
 import { terser as terserPlugin } from 'rollup-plugin-terser'
-import rollupVirtual from './utils/rollup_plugin_virtual'
 
 interface Options {
   /** The absolute path of the directory that holds the package to bundle. There must by package.json in the root. */
@@ -114,12 +113,9 @@ async function buildCodeBody(
   minify?: boolean,
 ): Promise<string> {
   const bundle = await rollup.rollup({
-    input: 'virtual:entry',
+    input: entryFilePath,
     preserveSymlinks: true, // To prevent going outside the sandbox
     plugins: [
-      rollupVirtual({
-        'virtual:entry': `export * from ${JSON.stringify(entryFilePath)}; console.log('Virtual entrypoint works')`,
-      }),
       rollupNodeResolve({
         browser: true,
         rootDir: sandboxDirectory,
