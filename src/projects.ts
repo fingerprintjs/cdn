@@ -47,6 +47,7 @@ export interface ProjectPackageMonitoring {
 export type BundleFormat = 'iife' | 'esm' | 'umd'
 
 const fingerprintJsRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintJS' } as const
+const botdRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
 
 /**
  * The keys are the first part of the incoming URL. The keys mayn't include slashes.
@@ -66,6 +67,23 @@ export const projects: Record<string, Project> = {
           'umd.js': { ...fingerprintJsRouteCommon, format: 'umd' },
           'umd.min.js': { ...fingerprintJsRouteCommon, format: 'umd', minified: true },
           'npm-monitoring': { type: 'monitoring' },
+        },
+      },
+    ],
+  },
+  botd: {
+    versions: [
+      {
+        npmPackage: '@fpjs-incubator/botd-agent',
+        versionRange: {},
+        routes: {
+          '': { type: 'redirect', target: 'esm.min.js' },
+          'iife.js': { ...botdRouteCommon, format: 'iife' },
+          'iife.min.js': { ...botdRouteCommon, format: 'iife', minified: true },
+          'esm.js': { ...botdRouteCommon, format: 'esm' },
+          'esm.min.js': { ...botdRouteCommon, format: 'esm', minified: true },
+          'umd.js': { ...botdRouteCommon, format: 'umd' },
+          'umd.min.js': { ...botdRouteCommon, format: 'umd', minified: true },
         },
       },
     ],
