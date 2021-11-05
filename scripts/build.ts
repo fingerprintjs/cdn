@@ -4,15 +4,9 @@
  */
 
 import * as path from 'path'
-import { promisify } from 'util'
 import { promises as fs } from 'fs'
-import { exec } from 'child_process'
+import { spawn, SpawnOptions } from 'child_process'
 import * as fsExtra from 'fs-extra'
-import * as rollup from 'rollup'
-
-// `import ... from ...` doesn't work here for some reason
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const rollupTypescript = require('@rollup/plugin-typescript')
 
 const projectRootDirectory = path.join(__dirname, '..')
 const distDirectory = path.join(projectRootDirectory, 'dist')
@@ -23,37 +17,21 @@ async function prepareDistDirectory() {
 }
 
 async function buildLambda() {
-  const lambdaBundle = await rollup.rollup({
-    input: path.join(projectRootDirectory, 'src', 'index.ts'),
-    external: (id) => /^[^./]/.test(id), // Don't bundle node modules in
-    plugins: [
-      /*rollupNodeResolve({
-        preferBuiltins: true,
-      }),
-      rollupCommonJs(),
-      rollupJson(),*/
-      rollupTypescript({
-        declaration: false,
-      }),
-    ],
-  })
-  await lambdaBundle.write({
-    dir: distDirectory,
-    format: 'cjs',
-    generatedCode: 'es2015',
-    banner: '/*\n * The code was generated automatically from https://github.com/fingerprintjs/cdn\n */',
-  })
+  await runCommand(`./node_modules/.bin/tsc`)
 }
 
 async function copyNodeModulesForLambda() {
   await Promise.all([
-    fs.cp(path.join(projectRootDirectory, 'package.json'), path.join(distDirectory, 'package.json')),
-    fs.cp(path.join(projectRootDirectory, 'yarn.lock'), path.join(distDirectory, 'yarn.lock')),
+    fs.copyFile(path.join(projectRootDirectory, 'package.json'), path.join(distDirectory, 'package.json')),
+    fs.copyFile(path.join(projectRootDirectory, 'yarn.lock'), path.join(distDirectory, 'yarn.lock')),
+
+    // We will use fs.cp when GitHub Actions support Node.js 16
     fsExtra.copy(path.join(projectRootDirectory, 'node_modules'), path.join(distDirectory, 'node_modules')),
   ])
   // Yarn just removes the excess Node modules
-  await promisify(exec)(`yarn install --production`, {
+  await runCommand('yarn install', ['--production'], {
     cwd: distDirectory,
+    shell: true,
   })
   await Promise.all([fs.rm(path.join(distDirectory, 'package.json')), fs.rm(path.join(distDirectory, 'yarn.lock'))])
 }
@@ -67,6 +45,22 @@ async function build() {
     await fs.rm(distDirectory, { recursive: true, force: true })
     throw error
   }
+}
+
+function runCommand(command: string, args: string[] = [], options: SpawnOptions = {}) {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, options)
+    child.stdout?.pipe(process.stdout)
+    child.stderr?.pipe(process.stderr)
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code) {
+        reject(new Error(`The ${command} command has exited with code ${code}`))
+      } else {
+        resolve()
+      }
+    })
+  })
 }
 
 build().catch((error) => {

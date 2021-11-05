@@ -94,8 +94,7 @@ async function withSandbox<T>(
 
     return await action(sandboxDirectory, packageSandboxDirectory)
   } finally {
-    console.log(sandboxDirectory)
-    // void fs.rm(sandboxDirectory, { recursive: true, force: true })
+    void fs.rm(sandboxDirectory, { recursive: true, force: true })
   }
 }
 

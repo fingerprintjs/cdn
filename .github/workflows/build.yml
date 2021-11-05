@@ -1,5 +1,5 @@
 # Reference on this file: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-name: Lint and build
+name: Lint, build and test
 on:
   push:
     branches:
@@ -7,7 +7,7 @@ on:
   pull_request:
 jobs:
   build:
-    name: Lint and build
+    name: Lint, build and test
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -25,6 +25,8 @@ jobs:
         run: yarn lint
       - name: Build
         run: yarn build
+      - name: Test the basic ability to run the distributive code
+        run: yarn test:dist-can-run
       - name: Make an archive for AWS Lambda and save it as an artifact
         uses: actions/upload-artifact@v2
         with:
