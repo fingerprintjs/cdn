@@ -5,7 +5,7 @@
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --max-warnings 0 .",
     "lint:fix": "yarn lint --fix",
     "test": "ts-node src/index.test.ts",
-    "test:dist-can-run": "cd dist && node --require './index.js' --eval ''"
+    "test:dist-can-run": "cd dist && node --require './src/index.js' --eval ''"
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^13.0.6",

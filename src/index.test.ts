@@ -9,14 +9,14 @@ async function test() {
     let response: CloudFrontResultResponse
 
     try {
-      console.time('Package download')
+      console.time('Total')
       response = (await handler(
         makeMockEvent('/fingerprintjs/v3.3.0/esm.min.js'),
         makeMockContext(),
         () => undefined,
       )) as CloudFrontResultResponse
     } finally {
-      console.timeEnd('Package download')
+      console.timeEnd('Total')
     }
 
     console.log(response.status, response.headers, response.body?.slice(0, 1000))
