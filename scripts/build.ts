@@ -1,23 +1,21 @@
+/* eslint-disable no-console */
 /*
  * This scripts builds the distributive files
  */
 
 import * as path from 'path'
+import { promisify } from 'util'
 import { promises as fs } from 'fs'
+import { exec } from 'child_process'
 import * as fsExtra from 'fs-extra'
 import * as rollup from 'rollup'
-import { nodeResolve as rollupNodeResolve } from '@rollup/plugin-node-resolve'
 
 // `import ... from ...` doesn't work here for some reason
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const rollupTypescript = require('@rollup/plugin-typescript')
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const rollupCommonJs = require('@rollup/plugin-commonjs')
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const rollupJson = require('@rollup/plugin-json')
 
-const distDirectory = path.join(__dirname, '..', 'dist')
-const nodeModulesForLambdaBundler = ['tslib']
+const projectRootDirectory = path.join(__dirname, '..')
+const distDirectory = path.join(projectRootDirectory, 'dist')
 
 async function prepareDistDirectory() {
   await fs.rm(distDirectory, { recursive: true, force: true })
@@ -25,42 +23,45 @@ async function prepareDistDirectory() {
 }
 
 async function buildLambda() {
-  // Embedding all the dependencies into the bundle to remove the unused code that Node.js would load
   const lambdaBundle = await rollup.rollup({
-    input: path.join(__dirname, '..', 'src', 'lambda.ts'),
+    input: path.join(projectRootDirectory, 'src', 'index.ts'),
+    external: (id) => /^[^./]/.test(id), // Don't bundle node modules in
     plugins: [
-      rollupNodeResolve({
+      /*rollupNodeResolve({
         preferBuiltins: true,
       }),
       rollupCommonJs(),
-      rollupJson(),
+      rollupJson(),*/
       rollupTypescript({
         declaration: false,
       }),
     ],
   })
   await lambdaBundle.write({
-    file: path.join(distDirectory, 'index.js'),
+    dir: distDirectory,
     format: 'cjs',
+    generatedCode: 'es2015',
     banner: '/*\n * The code was generated automatically from https://github.com/fingerprintjs/cdn\n */',
   })
 }
 
-async function copyNodeModulesForLambdaBundler() {
-  await Promise.all(
-    nodeModulesForLambdaBundler.map((name) =>
-      fsExtra.copy(
-        path.join(__dirname, '..', 'node_modules', ...name.split('/')),
-        path.join(distDirectory, 'node_modules', ...name.split('/')),
-      ),
-    ),
-  )
+async function copyNodeModulesForLambda() {
+  await Promise.all([
+    fs.cp(path.join(projectRootDirectory, 'package.json'), path.join(distDirectory, 'package.json')),
+    fs.cp(path.join(projectRootDirectory, 'yarn.lock'), path.join(distDirectory, 'yarn.lock')),
+    fsExtra.copy(path.join(projectRootDirectory, 'node_modules'), path.join(distDirectory, 'node_modules')),
+  ])
+  // Yarn just removes the excess Node modules
+  await promisify(exec)(`yarn install --production`, {
+    cwd: distDirectory,
+  })
+  await Promise.all([fs.rm(path.join(distDirectory, 'package.json')), fs.rm(path.join(distDirectory, 'yarn.lock'))])
 }
 
 async function build() {
   try {
     await prepareDistDirectory()
-    await Promise.all([buildLambda(), copyNodeModulesForLambdaBundler()])
+    await Promise.all([buildLambda(), copyNodeModulesForLambda()])
   } catch (error) {
     // Don't make a broken distributive directory
     await fs.rm(distDirectory, { recursive: true, force: true })

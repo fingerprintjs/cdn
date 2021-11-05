@@ -1,4 +1,3 @@
-import * as path from 'path'
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import {
   makeCacheHeaders,
@@ -125,7 +124,7 @@ async function handleExactNpmVersion({
 
   const code = await buildBundle({
     packageDirectory,
-    nodeModulesDirectory: path.join(__dirname, '..', 'node_modules'),
+    nodeModules: ['tslib'],
     format: route.format,
     globalVariableName: route.globalVariableName,
     minify: route.minified,

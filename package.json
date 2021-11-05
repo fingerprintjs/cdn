@@ -4,7 +4,8 @@
     "build": "ts-node --compiler-options '{\"module\": \"CommonJS\"}' scripts/build.ts",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --max-warnings 0 .",
     "lint:fix": "yarn lint --fix",
-    "test": "ts-node --compiler-options '{\"module\": \"CommonJS\"}' src/lambda.test.ts"
+    "test": "ts-node --compiler-options '{\"module\": \"CommonJS\"}' src/index.test.ts",
+    "test:dist-can-run": "cd dist && node --require './index.js' --eval ''"
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^13.0.6",
@@ -15,8 +16,6 @@
     "tslib": "^2.3.1"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^21.0.1",
-    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-typescript": "^8.3.0",
     "@types/aws-lambda": "^8.10.85",
     "@types/fs-extra": "^9.0.13",

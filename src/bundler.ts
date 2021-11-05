@@ -8,8 +8,8 @@ import { terser as terserPlugin } from 'rollup-plugin-terser'
 interface Options {
   /** The absolute path of the directory that holds the package to bundle. There must by package.json in the root. */
   packageDirectory: string
-  /** The absolut path of a node_modules directory available during bundling. */
-  nodeModulesDirectory?: string | undefined
+  /** Names of Node modules (from the node_modules directory) available during bundling. */
+  nodeModules?: string[]
   format: rollup.ModuleFormat
   globalVariableName: string
   minify?: boolean | undefined
@@ -20,13 +20,13 @@ interface Options {
  */
 export default function buildBundle({
   packageDirectory,
-  nodeModulesDirectory,
+  nodeModules = [],
   format,
   globalVariableName,
   minify,
 }: Options): Promise<string> {
   // todo: Include the banner from the original file
-  return withSandbox(packageDirectory, nodeModulesDirectory, async (sandboxDirectory, packageDirectory) => {
+  return withSandbox(packageDirectory, nodeModules, async (sandboxDirectory, packageDirectory) => {
     const entrypoint = await getPackageModulePath(packageDirectory)
     const bundle = await rollup.rollup({
       input: entrypoint,
@@ -63,7 +63,7 @@ export default function buildBundle({
  */
 async function withSandbox<T>(
   packageDirectory: string,
-  nodeModulesDirectory: string | undefined,
+  nodeModules: string[],
   action: (sandboxDirectory: string, packageDirectory: string) => Promise<T> | T,
 ) {
   let sandboxDirectory: string
@@ -80,21 +80,22 @@ async function withSandbox<T>(
     }
   }
 
-  await fs.mkdir(sandboxDirectory, { recursive: true })
-
   try {
+    await fs.mkdir(path.join(sandboxDirectory, 'node_modules'), { recursive: true })
     const packageSandboxDirectory = path.join(sandboxDirectory, 'package')
 
     await Promise.all([
       fs.symlink(packageDirectory, packageSandboxDirectory, 'dir'),
-      nodeModulesDirectory === undefined
-        ? undefined
-        : fs.symlink(nodeModulesDirectory, path.join(sandboxDirectory, 'node_modules'), 'dir'),
+      ...nodeModules.map((name) => {
+        const moduleSubdir = path.join('node_modules', ...name.split('/'))
+        return fs.symlink(path.join(__dirname, '..', moduleSubdir), path.join(sandboxDirectory, moduleSubdir), 'dir')
+      }),
     ])
 
     return await action(sandboxDirectory, packageSandboxDirectory)
   } finally {
-    void fs.rm(sandboxDirectory, { recursive: true, force: true })
+    console.log(sandboxDirectory)
+    // void fs.rm(sandboxDirectory, { recursive: true, force: true })
   }
 }
 

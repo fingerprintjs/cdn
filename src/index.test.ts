@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
-import { handler } from './lambda'
+import { handler } from './index'
 
 // todo: Cover everything with tests
 
