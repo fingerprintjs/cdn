@@ -1,16 +1,10 @@
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
-import {
-  makeCacheHeaders,
-  makeCorsHeaders,
-  notFoundStatus,
-  okStatus,
-  permanentRedirectStatus,
-  temporaryRedirectStatus,
-} from './utils/http'
+import * as httpUtil from './utils/http'
 import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataVagueVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
 import buildBundle from './bundler'
+import { withBestPractices } from './utils/http'
 
 const oneHour = 60 * 60 * 1000
 const oneDay = oneHour * 24
@@ -26,16 +20,12 @@ const monitoringCdnCacheTime = oneYear
 /**
  * The entrypoint of the lambda function
  */
-export const handler: CloudFrontRequestHandler = async (event) => {
+export const handler: CloudFrontRequestHandler = withBestPractices(async (event) => {
   const request = event.Records[0].cf.request
-
   if (request.uri === '/') {
     return {
-      ...okStatus,
-      headers: {
-        ...makeCorsHeaders(),
-        ...makeCacheHeaders(immutableCacheTime),
-      },
+      ...httpUtil.okStatus,
+      headers: httpUtil.makeCacheHeaders(immutableCacheTime),
       body: 'Hello, have a nice day',
     }
   }
@@ -48,12 +38,12 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   // TypeScript doesn't guards the type if `uriData.version.requestedType === 'vague'` is used
   const { version } = uriData
   if (version.requestedType === 'vague') {
-    return await handleVagueNpmVersion({ ...uriData, version })
+    return await handleVagueProjectVersion({ ...uriData, version })
   }
-  return await handleExactNpmVersion({ ...uriData, version })
-}
+  return await handleExactProjectVersion({ ...uriData, version })
+})
 
-async function handleVagueNpmVersion({
+async function handleVagueProjectVersion({
   project,
   version,
   route,
@@ -73,18 +63,18 @@ async function handleVagueNpmVersion({
     throw error
   }
 
+  // If the route is a redirect, follow that redirect to make browser do 1 redirect instead of 2
   const redirectUri = makeRequestUri(project.key, exactVersion, route.type === 'redirect' ? route.target : route.path)
   return {
-    ...temporaryRedirectStatus,
+    ...httpUtil.temporaryRedirectStatus,
     headers: {
-      ...makeCorsHeaders(),
-      ...makeCacheHeaders(tempRedirectBrowserCacheTime, tempRedirectCdnCacheTime),
+      ...httpUtil.makeCacheHeaders(tempRedirectBrowserCacheTime, tempRedirectCdnCacheTime),
       location: [{ value: redirectUri }],
     },
   }
 }
 
-async function handleExactNpmVersion({
+async function handleExactProjectVersion({
   project,
   version,
   route,
@@ -92,10 +82,9 @@ async function handleExactNpmVersion({
   if (route.type === 'redirect') {
     const redirectUri = makeRequestUri(project.key, version.requestedVersion, route.target)
     return {
-      ...permanentRedirectStatus,
+      ...httpUtil.permanentRedirectStatus,
       headers: {
-        ...makeCorsHeaders(),
-        ...makeCacheHeaders(immutableCacheTime),
+        ...httpUtil.makeCacheHeaders(immutableCacheTime),
         location: [{ value: redirectUri }],
       },
     }
@@ -103,11 +92,8 @@ async function handleExactNpmVersion({
 
   if (route.type === 'monitoring') {
     return {
-      ...okStatus,
-      headers: {
-        ...makeCorsHeaders(),
-        ...makeCacheHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
-      },
+      ...httpUtil.okStatus,
+      headers: httpUtil.makeCacheHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
     }
   }
 
@@ -131,10 +117,9 @@ async function handleExactNpmVersion({
   })
 
   return {
-    ...okStatus,
+    ...httpUtil.okStatus,
     headers: {
-      ...makeCorsHeaders(),
-      ...makeCacheHeaders(immutableCacheTime),
+      ...httpUtil.makeCacheHeaders(immutableCacheTime),
       'content-type': [{ value: 'application/javascript; charset=utf-8' }],
     },
     body: code,
@@ -143,11 +128,8 @@ async function handleExactNpmVersion({
 
 function makeNotFoundResponse(message: string): CloudFrontResultResponse {
   return {
-    ...notFoundStatus,
-    headers: {
-      ...makeCorsHeaders(),
-      ...makeCacheHeaders(notFoundBrowserCacheTime, notFoundCdnCacheTime),
-    },
+    ...httpUtil.notFoundStatus,
+    headers: httpUtil.makeCacheHeaders(notFoundBrowserCacheTime, notFoundCdnCacheTime),
     body: message,
   }
 }

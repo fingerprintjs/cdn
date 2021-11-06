@@ -1,4 +1,4 @@
-import { CloudFrontHeaders, CloudFrontResultResponse } from 'aws-lambda'
+import { CloudFrontHeaders, CloudFrontRequestEvent, CloudFrontResultResponse } from 'aws-lambda'
 
 type Status = Pick<CloudFrontResultResponse, 'status' | 'statusDescription'>
 
@@ -21,9 +21,28 @@ export const notFoundStatus: Status = {
   statusDescription: 'Not Found',
 }
 
-export function makeCorsHeaders(): CloudFrontHeaders {
-  return {
-    'access-control-allow-origin': [{ value: '*' }],
+/**
+ * A common HTTP middleware that applies best CDN practices
+ */
+export function withBestPractices(
+  next: (event: CloudFrontRequestEvent) => Promise<CloudFrontResultResponse> | CloudFrontResultResponse,
+): (event: CloudFrontRequestEvent) => Promise<CloudFrontResultResponse> {
+  return async (event) => {
+    const response = await next(event)
+    return {
+      ...response,
+      headers: mergeHeaders(
+        response.headers,
+        {
+          'access-control-allow-origin': [{ value: '*' }],
+          'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
+        },
+        !/^3\d\d$/.test(response.status) && {
+          'content-type': [{ value: 'text/plain; charset=UTF-8' }],
+          'x-content-type-options': [{ value: 'nosniff' }],
+        },
+      ),
+    }
   }
 }
 
@@ -56,4 +75,19 @@ export function makeCacheHeaders(
 
 function applyFluctuation(value: number, fluctuation: number): number {
   return value * (1 - fluctuation / 2 + fluctuation * Math.random())
+}
+
+function mergeHeaders(...headerSets: (CloudFrontHeaders | false | null | undefined)[]): CloudFrontHeaders {
+  const result = { ...headerSets[0] }
+  for (let i = 1; i < headerSets.length; ++i) {
+    const headers = headerSets[i]
+    if (headers) {
+      for (const [name, value] of Object.entries(headers)) {
+        if (!result[name]?.length) {
+          result[name] = value
+        }
+      }
+    }
+  }
+  return result
 }
