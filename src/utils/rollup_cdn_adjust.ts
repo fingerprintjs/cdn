@@ -1,18 +1,28 @@
 import { Plugin } from 'rollup'
+import { escapeForRegex } from './regex'
+
+interface Options {
+  /**
+   * The words to replace in the library distributive files. The keys are the targets, the values are the replacements
+   * (inserted as is). When searching, the targets are expected to be surrounded by word boundaries (\b in regexps).
+   */
+  replacements?: Record<string, string> | undefined
+}
 
 /**
  * Creates a Rollup plugin for CDN-specific transformations
  */
-export default function rollupCdnAdjust(): Plugin {
+export default function rollupCdnAdjust({ replacements }: Options = {}): Plugin {
   // Official guide: https://rollupjs.org/guide/en/#transformers
-  // Plugin examples:
-  // https://github.com/rollup/plugins/blob/master/packages/replace/src/index.js
-  // https://github.com/se-panfilov/rollup-plugin-strip-code/blob/master/index.js
+  // Inspired by: https://github.com/rollup/plugins/blob/master/packages/replace/src/index.js
   return {
     name: 'cdnAdjust',
 
     transform(source, id) {
-      return isThirdPartyLibrary(id) ? null : removeCodeSpecifiedBySource(source)
+      if (!replacements || Object.keys(replacements).length === 0 || isThirdPartyLibrary(id)) {
+        return null
+      }
+      return replaceInCode(source, replacements)
     },
   }
 }
@@ -21,11 +31,9 @@ function isThirdPartyLibrary(id: string) {
   return id.includes('/node_modules/')
 }
 
-/* fpjs-cdn-remove-start */
-/* fpjs-cdn-remove-end */
-/**
- * Removes the code that stands between the special comments above
- */
-function removeCodeSpecifiedBySource(code: string) {
-  return code.replace(/\/\*\s*fpjs-cdn-remove-start\s*\*\/[\s\S]*?\/\*\s*fpjs-cdn-remove-end\s*\*\//g, '')
+function replaceInCode(code: string, replacements: Record<string, string>) {
+  return code.replace(
+    new RegExp(`\\b(${Object.keys(replacements).map(escapeForRegex).join('|')})\\b`, 'g'),
+    (_, key) => replacements[key],
+  )
 }

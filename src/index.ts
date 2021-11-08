@@ -114,6 +114,7 @@ async function handleExactProjectVersion({
     format: route.format,
     globalVariableName: route.globalVariableName,
     minify: route.minified,
+    replacements: route.replacements,
   })
 
   return {

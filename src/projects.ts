@@ -33,8 +33,14 @@ export interface ProjectRedirect {
 export interface ProjectPackageMainBundle {
   type: 'packageMain'
   format: BundleFormat
+  /** The name of the global (window) variable. Required for IIFE and UMD formats. */
   globalVariableName: string
   minified?: boolean
+  /**
+   * The words to replace in the library distributive files. The keys are the targets, the values are the replacements
+   * (inserted as is). When searching, the targets are expected to be surrounded by word boundaries (\b in regexps).
+   */
+  replacements?: Record<string, string>
 }
 
 /**
@@ -44,9 +50,14 @@ export interface ProjectPackageMonitoring {
   type: 'monitoring'
 }
 
-export type BundleFormat = 'iife' | 'esm' | 'umd'
+export type BundleFormat = 'iife' | 'esm' | 'umd' | 'amd'
 
-const fingerprintJsRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintJS' } as const
+const fingerprintJsRouteCommon = {
+  type: 'packageMain',
+  globalVariableName: 'FingerprintJS',
+  replacements: { 'window.__fpjs_d_m': 'true' },
+} as const
+
 const botdRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
 
 /**

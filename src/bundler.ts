@@ -14,6 +14,8 @@ interface Options {
   format: rollup.ModuleFormat
   globalVariableName: string
   minify?: boolean | undefined
+  /** @see rollupCdnAdjust */
+  replacements?: Record<string, string> | undefined
 }
 
 /**
@@ -25,11 +27,12 @@ export default function buildBundle({
   format,
   globalVariableName,
   minify,
+  replacements,
 }: Options): Promise<string> {
   return withSandbox(packageDirectory, nodeModules, async (sandboxDirectory, packageDirectory) => {
     const entrypoint = await getPackageModulePath(packageDirectory)
     const [codeBody, codeBanner] = await Promise.all([
-      buildCodeBody(sandboxDirectory, entrypoint, format, globalVariableName, minify),
+      buildCodeBody(sandboxDirectory, entrypoint, format, globalVariableName, minify, replacements),
       getCodeBanner(entrypoint),
     ])
     return `${codeBanner}${codeBanner && '\n'}${codeBody}`
@@ -104,6 +107,7 @@ async function buildCodeBody(
   format: rollup.ModuleFormat,
   globalVariableName: string,
   minify?: boolean,
+  replacements?: Record<string, string>,
 ): Promise<string> {
   const bundle = await rollup.rollup({
     input: entryFilePath,
@@ -114,7 +118,7 @@ async function buildCodeBody(
         rootDir: sandboxDirectory,
         jail: sandboxDirectory,
       }),
-      rollupCdnAdjust(),
+      rollupCdnAdjust({ replacements }),
     ],
   })
   const { output } = await bundle.generate({
