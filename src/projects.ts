@@ -23,7 +23,7 @@ export type ProjectRoute = ProjectRedirect | ProjectPackageMainBundle | ProjectP
 
 export interface ProjectRedirect {
   type: 'redirect'
-  /** A path within the same project and version */
+  /** A path within the same project and version. The target may but shouldn't be a redirect. */
   target: string
 }
 

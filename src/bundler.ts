@@ -4,6 +4,7 @@ import * as rollup from 'rollup'
 import { nodeResolve as rollupNodeResolve } from '@rollup/plugin-node-resolve'
 import { terser as terserPlugin } from 'rollup-plugin-terser'
 import { makeTemporaryDirectory, readFirstCharacters } from './utils/filesystem'
+import rollupCdnAdjust from './utils/rollup_cdn_adjust'
 
 interface Options {
   /** The absolute path of the directory that holds the package to bundle. There must by package.json in the root. */
@@ -113,6 +114,7 @@ async function buildCodeBody(
         rootDir: sandboxDirectory,
         jail: sandboxDirectory,
       }),
+      rollupCdnAdjust(),
     ],
   })
   const { output } = await bundle.generate({
