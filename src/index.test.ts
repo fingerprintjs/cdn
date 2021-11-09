@@ -11,7 +11,7 @@ async function test() {
     try {
       console.time('Total')
       response = (await handler(
-        makeMockEvent('/fingerprintjs/v3.3.0/esm.min.js'),
+        makeMockEvent('/fingerprintjs@3.3.0/esm.min.js'),
         makeMockContext(),
         () => undefined,
       )) as CloudFrontResultResponse
