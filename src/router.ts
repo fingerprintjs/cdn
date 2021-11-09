@@ -1,5 +1,5 @@
 import { Project, ProjectRoute, projects, ProjectVersion } from './projects'
-import { doVersionRangesIntersect, getNextVersion, isVersionInRange, VersionRange } from './utils/version'
+import * as versionUtil from './utils/version'
 
 interface ExactVersion extends ProjectVersion {
   requestedType: 'exact'
@@ -8,7 +8,7 @@ interface ExactVersion extends ProjectVersion {
 
 interface VagueVersion extends ProjectVersion {
   requestedType: 'vague'
-  requestedRange: VersionRange
+  requestedRange: versionUtil.VersionRange
 }
 
 export interface UriData {
@@ -25,7 +25,7 @@ export type UriDataVagueVersion = UriData & { version: VagueVersion }
  * The URI is expected to always start with a slash.
  */
 export function parseRequestUri(uri: string): UriData | undefined {
-  const uriMatches = /^\/([^/@]*)@([^/@]{1,16})(?:\/(.+))?$/.exec(uri)
+  const uriMatches = /^\/([^/]*)@([^/@]*)(?:\/(.+))?$/.exec(uri)
   if (!uriMatches) {
     return undefined
   }
@@ -62,11 +62,11 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
   const isVagueVersion = /^\d+(\.\d+)?$/.test(rawVersion)
 
   if (isVagueVersion) {
-    const requestedRange = { start: rawVersion, end: getNextVersion(rawVersion) }
+    const requestedRange = { start: rawVersion, end: versionUtil.getNextVersion(rawVersion) }
     if (requestedRange.end) {
       // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
       for (let i = projectVersions.length - 1; i >= 0; --i) {
-        if (doVersionRangesIntersect(projectVersions[i].versionRange, requestedRange)) {
+        if (versionUtil.doVersionRangesIntersect(projectVersions[i].versionRange, requestedRange)) {
           return {
             ...projectVersions[i],
             requestedType: 'vague',
@@ -75,10 +75,10 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
         }
       }
     }
-  } else {
+  } else if (versionUtil.isSemVerVersion(rawVersion)) {
     // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
     for (let i = projectVersions.length - 1; i >= 0; --i) {
-      if (isVersionInRange(projectVersions[i].versionRange, rawVersion)) {
+      if (versionUtil.isVersionInRange(projectVersions[i].versionRange, rawVersion)) {
         return {
           ...projectVersions[i],
           requestedType: 'exact',

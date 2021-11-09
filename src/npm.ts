@@ -4,15 +4,21 @@ import * as zlib from 'zlib'
 import * as path from 'path'
 import got from 'got'
 import * as tar from 'tar-fs'
-import { compareVersions, isStableVersion, isVersionInRange, VersionRange } from './utils/version'
+import { compareVersions, isStableVersion, isSemVerVersion, isVersionInRange, VersionRange } from './utils/version'
 import { makeTemporaryDirectory } from './utils/filesystem'
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const validateNpmName = require('validate-npm-package-name')
 
 /**
  * Expected errors
  */
 export const enum ErrorName {
   /** The package or its version don't exist on the NPM registry */
-  NpmNotFound = 'npmNotFound',
+  NpmNotFound = 'NpmNotFound',
+  /** The package name is not a valid package name */
+  InvalidPackageName = 'InvalidPackageName',
+  /** The package version is not a valid version string */
+  InvalidVersionName = 'InvalidVersionName',
 }
 
 /**
@@ -76,9 +82,7 @@ export async function getPackageGreatestVersion(
       .json()
   } catch (error) {
     if (error instanceof got.HTTPError && error.response.statusCode === 404) {
-      const error = new Error(`The package ${name} doesn't exist on NPM`)
-      error.name = ErrorName.NpmNotFound
-      throw error
+      throw createError(ErrorName.NpmNotFound, `The package ${name} doesn't exist on NPM`)
     }
     throw error
   }
@@ -88,16 +92,15 @@ export async function getPackageGreatestVersion(
     return greatestVersion
   }
 
-  const error = new Error(
+  throw createError(
+    ErrorName.NpmNotFound,
     versionRange?.start || versionRange?.end
       ? 'No version of the NPM package matches ' +
-        [versionRange?.start && `≥${versionRange.start}`, versionRange?.end && `<${versionRange.end}`]
-          .filter(Boolean)
-          .join(' and ')
+          [versionRange?.start && `≥${versionRange.start}`, versionRange?.end && `<${versionRange.end}`]
+            .filter(Boolean)
+            .join(' and ')
       : 'The NPM package nas no versions',
   )
-  error.name = ErrorName.NpmNotFound
-  throw error
 }
 
 /**
@@ -177,22 +180,28 @@ function findGreatestVersion(
 }
 
 function getPackageInformationUrl(name: string) {
-  // Sanitize the package name strictly just in case
-  if (name.startsWith('@')) {
-    const slashPosition = name.indexOf('/')
-    if (slashPosition !== -1) {
-      return [
-        registryUrl,
-        `@${encodeURIComponent(name.slice(1, slashPosition))}`,
-        encodeURIComponent(name.slice(slashPosition + 1)),
-      ].join('/')
-    }
+  const nameCheck = validateNpmName(name)
+  if (!nameCheck.validForOldPackages) {
+    throw createError(ErrorName.InvalidPackageName, nameCheck.errors.join(', '))
   }
-  return `${registryUrl}/${encodeURIComponent(name)}`
+
+  // A proper package name is a URL-friendly string, so it's safe to insert it into the URL directly
+  return `${registryUrl}/${name}`
 }
 
 function getPackageTarballUrl(name: string, version: string) {
-  // Sanitize the version because it can come from the user input
+  if (!isSemVerVersion(version)) {
+    throw createError(ErrorName.InvalidVersionName)
+  }
+
+  // The package name is URL-friendly (otherwise `getPackageInformationUrl` throws an error), so it's safe to insert
+  // `scopelessName` into the URL directly. The valid SemVer version is URL-friendly too.
   const scopelessName = name.startsWith('@') ? name.split('/', 2)[1] : name
-  return `${getPackageInformationUrl(name)}/-/${encodeURIComponent(scopelessName)}-${encodeURIComponent(version)}.tgz`
+  return `${getPackageInformationUrl(name)}/-/${scopelessName}-${version}.tgz`
+}
+
+function createError(name: string, message = name) {
+  const error = new Error(message)
+  error.name = name
+  return error
 }

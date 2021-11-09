@@ -17,7 +17,7 @@ async function prepareDistDirectory() {
 }
 
 async function buildLambda() {
-  await runCommand(`./node_modules/.bin/tsc`)
+  await runCommand('./node_modules/.bin/tsc')
 }
 
 async function copyNodeModulesForLambda() {

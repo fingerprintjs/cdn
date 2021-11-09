@@ -82,7 +82,7 @@ export function intersectVersionRanges(range: VersionRange, ...ranges: VersionRa
  * It it's impossible to know the next version, returns undefined.
  */
 export function getNextVersion(version: string): string | undefined {
-  const match = /(^.*\.)?(\d+)$/.exec(version)
+  const match = /^(.*\.)?(\d+)$/.exec(version)
   if (!match) {
     return undefined
   }
@@ -94,6 +94,18 @@ export function getNextVersion(version: string): string | undefined {
  */
 export function isStableVersion(version: string): boolean {
   return /^\d+(\.\d+)*$/.test(version)
+}
+
+/**
+ * Checks whether the version is full and valid, i.e. matches an official SemVer regular expression
+ *
+ * @see https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+ */
+export function isSemVerVersion(version: string): boolean {
+  // A short synonym of the official regular expression:
+  return /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(\.(0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*)?(\+[0-9a-z-]+(\.[0-9a-z-]+)*)?$/i.test(
+    version,
+  )
 }
 
 function extractFirstVersionPart(version: string): [first: string, rest?: string] {

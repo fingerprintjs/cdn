@@ -26,7 +26,7 @@ export const handler: CloudFrontRequestHandler = withBestPractices(async (event)
     return {
       ...httpUtil.okStatus,
       headers: httpUtil.makeCacheHeaders(immutableCacheTime),
-      body: 'Hello, have a nice day',
+      body: 'This is a FingerprintJS CDN',
     }
   }
 
@@ -57,8 +57,12 @@ async function handleVagueProjectVersion({
       true,
     )
   } catch (error) {
-    if (error instanceof Error && error.name === NpmError.NpmNotFound) {
-      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
+    if (error instanceof Error) {
+      switch (error.name) {
+        case NpmError.NpmNotFound:
+        case NpmError.InvalidVersionName:
+          return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
+      }
     }
     throw error
   }
@@ -102,8 +106,12 @@ async function handleExactProjectVersion({
   try {
     packageDirectory = await downloadPackage(version.npmPackage, version.requestedVersion)
   } catch (error) {
-    if (error instanceof Error && error.name === NpmError.NpmNotFound) {
-      return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
+    if (error instanceof Error) {
+      switch (error.name) {
+        case NpmError.NpmNotFound:
+        case NpmError.InvalidVersionName:
+          return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
+      }
     }
     throw error
   }
