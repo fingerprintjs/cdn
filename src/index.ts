@@ -133,7 +133,7 @@ async function handleExactProjectVersion({
     ...httpUtil.okStatus,
     headers: {
       ...httpUtil.makeCacheHeaders(immutableCacheTime),
-      'content-type': [{ value: 'application/javascript; charset=utf-8' }],
+      'content-type': [{ value: 'text/javascript; charset=utf-8' }],
     },
     body: code,
   }
