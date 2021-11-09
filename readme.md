@@ -1,21 +1,32 @@
-WIP
+<p align="center">
+  <a href="https://fingerprintjs.com">
+    <img src="https://raw.githubusercontent.com/fingerprintjs/fingerprintjs/846724bc368a562f5fb5fb2e6221e624329e55b6/resources/logo.svg" alt="FingerprintJS" width="312px" />
+  </a>
+</p>
 
-A CDN for the open source projects of FingerprintJS
+A CDN for the open source projects of FingerprintJS.
+It works as a Lambda@Edge function attached to an AWS CloudFront distribution.
 
-## Library limitations
+Under the hood, it downloads packages from [NPM](https://npmjs.com), bundles them using [Rollup](https://rollupjs.org) and minifies using [Terser](https://terser.org).
+All this happens within a second on Lambda@Edge when a request arrives.
+CloudFront caches the responses so that the next requests are served instantly.
 
-These limitations apply to the libraries served by the CDN.
-Some of these limitations can be extended with changes to the CDN code.
+## API
 
-- Only versions published to NPM are served.
-- The library versions names must follow the SemVer standard. See the standard:
-    [a formal description](https://semver.org/#backusnaur-form-grammar-for-valid-semver-versions) or
-    [a regular expression](https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string).
-    The CDN treats 1- and 2-number versions as vague versions.
-- The only allowed external dependency (listed in the `dependencies` field of `package.json`) is `tslib` version 2.
-- The browser bundles mustn't exceed 1MB because CloudFront limits the size of the responses produced by lambdas.
-- The library and its external dependencies must have an ES entrypoint (having `import` and `export` instead of `require` and `exports`).
-    The entrypoint must be specified by the `module` or the `jsnext:main` field of the `package.json`.
-- The library's entrypoint code must be a UTF-8 text.
-- Ideally, the NPM package should include only the distributive code in ESM and CJS formats only.
-    It will make downloading the code faster.
+An asset URL looks like this:
+
+```
+https://openfpcdn.net/project@3/file.js
+```
+
+- `project` is the project name. It matches the part after https://github.com/fingerprintjs.
+- `3` is the project version. It can be either a major version (`3`), a minor version (`3.2`) or an exact version (`3.2.1`).
+    When a major or minor version is used, the CDN returns the latest appropriate version.
+- `file.js` it the name of a file within the project version.
+
+The available projects, versions and files are described in the [src/projects.ts](src/projects.ts) file.
+You can find example URLs on the pages of the projects.
+
+## Contributing
+
+See the [contributing guidelines](contributing.md) to learn how to run and deploy the code and how to add new a project.

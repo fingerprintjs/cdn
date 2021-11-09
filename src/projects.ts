@@ -64,6 +64,7 @@ const botdRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as c
  * The keys are the first part of the incoming URL. The keys mayn't include slashes.
  */
 export const projects: Record<string, Project> = {
+  // https://github.com/fingerprintjs/fingerprintjs
   fingerprintjs: {
     versions: [
       {
@@ -82,6 +83,8 @@ export const projects: Record<string, Project> = {
       },
     ],
   },
+
+  // https://github.com/fingerprintjs/botd
   botd: {
     versions: [
       {
