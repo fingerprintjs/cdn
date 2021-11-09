@@ -3,7 +3,6 @@ import * as httpUtil from './utils/http'
 import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataVagueVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
-import buildBundle from './bundler'
 import { withBestPractices } from './utils/http'
 
 const oneHour = 60 * 60 * 1000
@@ -57,12 +56,11 @@ async function handleVagueProjectVersion({
       true,
     )
   } catch (error) {
-    if (error instanceof Error) {
-      switch (error.name) {
-        case NpmError.NpmNotFound:
-        case NpmError.InvalidVersionName:
-          return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
-      }
+    if (
+      error instanceof Error &&
+      [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
+    ) {
+      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
     }
     throw error
   }
@@ -101,19 +99,25 @@ async function handleExactProjectVersion({
     }
   }
 
-  let packageDirectory: string
-
-  try {
-    packageDirectory = await downloadPackage(version.npmPackage, version.requestedVersion)
-  } catch (error) {
-    if (error instanceof Error) {
-      switch (error.name) {
-        case NpmError.NpmNotFound:
-        case NpmError.InvalidVersionName:
-          return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
+  const [packageDirectory, buildBundle] = await Promise.all([
+    downloadPackage(version.npmPackage, version.requestedVersion).catch((error) => {
+      if (
+        error instanceof Error &&
+        [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
+      ) {
+        return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
       }
-    }
-    throw error
+      throw error
+    }),
+
+    // This file imports Rollup, it takes some time. If was imported using the `import from` syntax, Rollup would be
+    // loaded on every request, and the time would be wasted. The dynamic import loads the code only when it's required
+    // and in parallel with other processes.
+    import('./bundler').then((module) => module.default),
+  ])
+
+  if (typeof packageDirectory === 'object') {
+    return packageDirectory
   }
 
   const code = await buildBundle({

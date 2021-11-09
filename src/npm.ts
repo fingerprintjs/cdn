@@ -2,8 +2,6 @@ import { promisify } from 'util'
 import * as stream from 'stream'
 import * as zlib from 'zlib'
 import * as path from 'path'
-import got from 'got'
-import * as tar from 'tar-fs'
 import { compareVersions, isStableVersion, isSemVerVersion, isVersionInRange, VersionRange } from './utils/version'
 import { makeTemporaryDirectory } from './utils/filesystem'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -70,6 +68,8 @@ export async function getPackageGreatestVersion(
   versionRange?: VersionRange,
   onlyStable?: boolean,
 ): Promise<string> {
+  // The dynamic importing is used to reduce the initialization time when the library isn't required
+  const { default: got } = await import('got')
   let packageInformation: RegistryPackageShortData
 
   try {
@@ -126,6 +126,9 @@ export function downloadPackage(name: string, version: string): Promise<string> 
  */
 async function downloadPackageRegardless(name: string, version: string): Promise<string> {
   // todo: Handle downloading errors
+  // The dynamic importing is used to reduce the initialization time when the libraries aren't required
+  const [{ default: got }, tar] = await Promise.all([import('got'), import('tar-fs')])
+
   const directory = await makeTemporaryDirectory()
 
   try {
