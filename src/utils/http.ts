@@ -41,10 +41,6 @@ export function withBestPractices(
           'content-type': [{ value: 'text/plain; charset=UTF-8' }],
           'x-content-type-options': [{ value: 'nosniff' }],
         },
-        // An instant redirect using HTTP/2. See https://www.ctrl.blog/entry/http2-push-redirects.html.
-        response.headers?.location?.[0] && {
-          link: [{ value: `<${response.headers.location[0].value}>; rel=preload` }],
-        },
       ),
     }
   }
