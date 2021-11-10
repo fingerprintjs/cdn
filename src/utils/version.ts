@@ -13,8 +13,12 @@ export interface VersionRange {
  *  1 - the first version is greater than the second version
  */
 export function compareVersions(version1: string, version2: string): -1 | 0 | 1 {
-  const [firstPart1, rest1] = extractFirstVersionPart(version1)
-  const [firstPart2, rest2] = extractFirstVersionPart(version2)
+  if (version1 === version2) {
+    return 0
+  }
+
+  const [firstPart1, rest1 = '0'] = extractFirstVersionPart(version1)
+  const [firstPart2, rest2 = '0'] = extractFirstVersionPart(version2)
 
   const firstNumber1 = parseInt(firstPart1)
   const firstNumber2 = parseInt(firstPart2)
@@ -22,25 +26,15 @@ export function compareVersions(version1: string, version2: string): -1 | 0 | 1 
     return 0
   }
   if (isNaN(firstNumber1)) {
-    return -1
+    return 1
   }
   if (isNaN(firstNumber2)) {
-    return 1
+    return -1
   }
   if (firstNumber1 !== firstNumber2) {
     return firstNumber1 < firstNumber2 ? -1 : 1
   }
 
-  // The first numbers of the versions are equal, so comparing the rest parts of the versions
-  if (rest1 === undefined && rest2 === undefined) {
-    return 0
-  }
-  if (rest1 === undefined) {
-    return -1
-  }
-  if (rest2 === undefined) {
-    return 1
-  }
   return compareVersions(rest1, rest2)
 }
 

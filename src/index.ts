@@ -3,7 +3,6 @@ import * as httpUtil from './utils/http'
 import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexacrVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
-import { withBestPractices } from './utils/http'
 
 const oneMinute = 60 * 1000
 const oneHour = oneMinute * 60
@@ -23,7 +22,7 @@ const monitoringCdnCacheTime = immutableCacheTime
 /**
  * The entrypoint of the lambda function
  */
-export const handler: CloudFrontRequestHandler = withBestPractices(async (event) => {
+export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(async (event) => {
   const request = event.Records[0].cf.request
   if (request.uri === '/') {
     return {
