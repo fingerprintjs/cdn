@@ -1,10 +1,11 @@
 {
   "private": true,
   "scripts": {
+    "run-lambda": "ts-node scripts/run.ts",
     "build": "ts-node scripts/build.ts",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --max-warnings 0 .",
     "lint:fix": "yarn lint --fix",
-    "test": "ts-node src/index.test.ts",
+    "test": "echo \"Coming soon\"",
     "test:dist-can-run": "cd dist && node --require './src/index.js' --eval ''"
   },
   "dependencies": {

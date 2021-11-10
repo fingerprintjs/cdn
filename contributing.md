@@ -10,10 +10,13 @@ Download the repository code, open a terminal in the repository root and run:
 yarn install
 ```
 
-The only way to run the function at the moment is running the tests:
+Emulate a CloudFront request and see the response produced by the code:
 
 ```bash
-yarn test
+yarn run-lambda --uri /fingerprintjs/v3
+
+# See the full response body:
+yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-body
 ```
 
 ## Adding a new project to serve
