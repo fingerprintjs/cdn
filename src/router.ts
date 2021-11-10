@@ -6,19 +6,19 @@ interface ExactVersion extends ProjectVersion {
   requestedVersion: string
 }
 
-interface VagueVersion extends ProjectVersion {
-  requestedType: 'vague'
+interface InexactVersion extends ProjectVersion {
+  requestedType: 'inexact'
   requestedRange: versionUtil.VersionRange
 }
 
 export interface UriData {
   project: Project & { key: string }
-  version: ExactVersion | VagueVersion
+  version: ExactVersion | InexactVersion
   route: ProjectRoute & { path: string }
 }
 
 export type UriDataExactVersion = UriData & { version: ExactVersion }
-export type UriDataVagueVersion = UriData & { version: VagueVersion }
+export type UriDataInexacrVersion = UriData & { version: InexactVersion }
 
 /**
  * Parses a URI of an incoming request.
@@ -59,9 +59,9 @@ export function makeRequestUri(projectKey: string, version: string, routePath: s
 }
 
 function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: string): UriData['version'] | undefined {
-  const isVagueVersion = /^\d+(\.\d+)?$/.test(rawVersion)
+  const isInexactVersion = /^\d+(\.\d+)?$/.test(rawVersion)
 
-  if (isVagueVersion) {
+  if (isInexactVersion) {
     const requestedRange = { start: rawVersion, end: versionUtil.getNextVersion(rawVersion) }
     if (requestedRange.end) {
       // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
@@ -69,7 +69,7 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
         if (versionUtil.doVersionRangesIntersect(projectVersions[i].versionRange, requestedRange)) {
           return {
             ...projectVersions[i],
-            requestedType: 'vague',
+            requestedType: 'inexact',
             requestedRange,
           }
         }

@@ -1,6 +1,6 @@
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import * as httpUtil from './utils/http'
-import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataVagueVersion } from './router'
+import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexacrVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
 import { withBestPractices } from './utils/http'
@@ -34,19 +34,19 @@ export const handler: CloudFrontRequestHandler = withBestPractices(async (event)
     return makeNotFoundResponse(`The ${request.uri} path doesn't exist`)
   }
 
-  // TypeScript doesn't guards the type if `uriData.version.requestedType === 'vague'` is used
+  // TypeScript doesn't guards the type if `uriData.version.requestedType === 'inexact'` is used
   const { version } = uriData
-  if (version.requestedType === 'vague') {
-    return await handleVagueProjectVersion({ ...uriData, version })
+  if (version.requestedType === 'inexact') {
+    return await handleInexactProjectVersion({ ...uriData, version })
   }
   return await handleExactProjectVersion({ ...uriData, version })
 })
 
-async function handleVagueProjectVersion({
+async function handleInexactProjectVersion({
   project,
   version,
   route,
-}: UriDataVagueVersion): Promise<CloudFrontResultResponse> {
+}: UriDataInexacrVersion): Promise<CloudFrontResultResponse> {
   let exactVersion: string
 
   try {
