@@ -16,7 +16,7 @@ CloudFront caches the responses so that the next requests are served instantly.
 An asset URL looks like this:
 
 ```
-https://openfpcdn.net/project@3/file.js
+https://openfpcdn.net/project/v3/file.js
 ```
 
 - `project` is the project name. It matches the part after https://github.com/fingerprintjs.
