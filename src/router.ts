@@ -25,19 +25,24 @@ export type UriDataInexacrVersion = UriData & { version: InexactVersion }
  * The URI is expected to always start with a slash.
  */
 export function parseRequestUri(uri: string): UriData | undefined {
-  const uriMatches = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
-  if (!uriMatches) {
+  const uriMatch = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
+  if (!uriMatch) {
     return undefined
   }
-  const [, projectKey, rawVersion, routePath = ''] = uriMatches
+
+  const projectKey = decodeURIComponent(uriMatch[1])
   if (!Object.prototype.hasOwnProperty.call(projects, projectKey)) {
     return undefined
   }
   const project = projects[projectKey]
+
+  const rawVersion = decodeURIComponent(uriMatch[2])
   const version = findAppropriateVersion(project.versions, rawVersion)
   if (!version) {
     return undefined
   }
+
+  const routePath = (uriMatch[3] || '').split('/').map(decodeURIComponent).join('/')
   if (!Object.prototype.hasOwnProperty.call(version.routes, routePath)) {
     return undefined
   }
@@ -55,7 +60,7 @@ export function parseRequestUri(uri: string): UriData | undefined {
  * The returned URI starts with a slash.
  */
 export function makeRequestUri(projectKey: string, version: string, routePath: string): string {
-  return `/${projectKey}/v${version}${routePath && `/${routePath}`}`
+  return ['', projectKey, `v${version}`, ...(routePath ? routePath.split('/') : [])].map(encodeURIComponent).join('/')
 }
 
 function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: string): UriData['version'] | undefined {
