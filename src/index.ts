@@ -5,16 +5,20 @@ import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } fro
 import { intersectVersionRanges } from './utils/version'
 import { withBestPractices } from './utils/http'
 
-const oneHour = 60 * 60 * 1000
+const oneMinute = 60 * 1000
+const oneHour = oneMinute * 60
 const oneDay = oneHour * 24
 const oneYear = oneDay * 365
 const immutableCacheTime = oneYear
-const notFoundBrowserCacheTime = oneDay
-const notFoundCdnCacheTime = oneHour
+// The not found time should be small to help in the following case:
+// 1. Somebody requests an exact version that doesn't exists, CloudFront caches the 404 response;
+// 2. The exact version is published and the inexact endpoint redirects to it.
+const notFoundBrowserCacheTime = oneHour
+const notFoundCdnCacheTime = oneMinute * 5
 const tempRedirectBrowserCacheTime = oneDay * 7
 const tempRedirectCdnCacheTime = oneHour
 const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
-const monitoringCdnCacheTime = oneYear
+const monitoringCdnCacheTime = immutableCacheTime
 
 /**
  * The entrypoint of the lambda function
