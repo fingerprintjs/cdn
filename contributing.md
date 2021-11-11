@@ -73,7 +73,8 @@ Fill in the fields during creation:
 Change the function settings:
 
 - On the function page scroll down to the "Runtime settings" section, open settings, and change the handler to `src/index.handler`
-- Click the "Configuration" tab, "General configuration", change the memory to 3538 MB and the timeout to 10 seconds.
+- Click the "Configuration" tab, "General configuration", change the memory to 3538 MB, the timeout to 10 seconds, and
+    the description to `CDN for open projects (https://github.com/fingerprintjs/cdn)`.
 
 The more RAM allocated to a lambda, the more CPU power it has. 1769MB = 1vCPU.
 The asset building speed depends on the allocated RAM linearly.
@@ -105,6 +106,7 @@ An example of a whole policy:
 ```
 
 Connect the lambda function to the distribution.
+Reload the browser page, otherwise the console may ignore the role changes.
 Go to [Lambda / Functions](https://console.aws.amazon.com/lambda/home#/functions).
 Open the created function.
 Add a trigger: CloudFront. Fill the fields:
