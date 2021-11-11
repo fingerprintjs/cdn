@@ -57,19 +57,19 @@ export function makeCacheHeaders(
   // todo: Consider adding ETag
   const headers: CloudFrontHeaders = {}
   const fluctuationMultiplier = 1 - durationFluctuation / 2 + durationFluctuation * Math.random()
-  const cacheControl = ['public', `max-age=${((browserCacheTime / 1000) * fluctuationMultiplier).toFixed()}`]
 
+  const cacheControl = ['public', `max-age=${((browserCacheTime / 1000) * fluctuationMultiplier).toFixed()}`]
   if (browserCacheTime !== cdnCacheDuration) {
     cacheControl.push(`s-maxage=${applyFluctuation(cdnCacheDuration / 1000, durationFluctuation).toFixed()}`)
+  }
+  headers['cache-control'] = [{ value: cacheControl.join(', ') }]
 
-    // When the browser cache life is longer than the CDN cache life, the "If-Modified" check will always return "true",
-    // so the Last-Modified header affects nothing.
-    if (browserCacheTime < cdnCacheDuration) {
-      headers['last-modified'] = [{ value: new Date().toUTCString() }]
-    }
+  // When the browser cache life is longer than the CDN cache life, the "If-Modified" check will always return "true",
+  // so the Last-Modified header affects nothing.
+  if (browserCacheTime < cdnCacheDuration) {
+    headers['last-modified'] = [{ value: new Date().toUTCString() }]
   }
 
-  headers['cache-control'] = [{ value: cacheControl.join(', ') }]
   return headers
 }
 

@@ -20,6 +20,7 @@ export async function readFirstCharacters(filePath: string, maxLength: number): 
         }
       })
       readStream.on('error', reject)
+      readStream.on('end', resolve)
     })
   } finally {
     readStream.close()

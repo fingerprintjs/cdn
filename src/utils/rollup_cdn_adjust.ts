@@ -33,7 +33,7 @@ function isThirdPartyLibrary(id: string) {
 
 function replaceInCode(code: string, replacements: Record<string, string>) {
   return code.replace(
-    new RegExp(`\\b(${Object.keys(replacements).map(escapeForRegex).join('|')})\\b`, 'g'),
-    (_, key) => replacements[key],
+    new RegExp(`(?<=\\W)(${Object.keys(replacements).map(escapeForRegex).join('|')})(?=\\W)`, 'g'),
+    (key) => replacements[key],
   )
 }
