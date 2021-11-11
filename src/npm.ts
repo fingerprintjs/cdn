@@ -24,7 +24,7 @@ export const enum ErrorName {
  *
  * @see https://github.com/npm/registry/blob/master/docs/responses/package-metadata.md
  */
-interface RegistryPackageShortData {
+export interface RegistryPackageShortData {
   name: string
   'dist-tags': Record<string, string>
   /** The versions go in order of publishing, not in version order */
@@ -33,8 +33,8 @@ interface RegistryPackageShortData {
     {
       name: string
       version: string
-      dependencies: Record<string, string>
-      devDependencies: Record<string, string>
+      dependencies?: Record<string, string>
+      devDependencies?: Record<string, string>
       dist: {
         shasum: string
         integrity?: string
@@ -43,6 +43,7 @@ interface RegistryPackageShortData {
         unpackedSize?: number
         'npm-signature'?: string
       }
+      deprecated?: string
     }
   >
   modified: string
@@ -99,7 +100,7 @@ export async function getPackageGreatestVersion(
           [versionRange?.start && `≥${versionRange.start}`, versionRange?.end && `<${versionRange.end}`]
             .filter(Boolean)
             .join(' and ')
-      : 'The NPM package nas no versions',
+      : 'The NPM package has no versions',
   )
 }
 
@@ -126,6 +127,7 @@ export function downloadPackage(name: string, version: string): Promise<string> 
  */
 async function downloadPackageRegardless(name: string, version: string): Promise<string> {
   // todo: Handle downloading errors
+  // todo: Try to store the unpacked packages in the memory instead of the disk
   // The dynamic importing is used to reduce the initialization time when the libraries aren't required
   const [{ default: got }, tar] = await Promise.all([import('got'), import('tar-fs')])
 
@@ -144,9 +146,7 @@ async function downloadPackageRegardless(name: string, version: string): Promise
     )
   } catch (error) {
     if (error instanceof got.HTTPError && error.response.statusCode === 404) {
-      const error = new Error(`The package ${name} or its version ${version} don't exist on NPM`)
-      error.name = ErrorName.NpmNotFound
-      throw error
+      throw createError(ErrorName.NpmNotFound, `The package ${name} or its version ${version} don't exist on NPM`)
     }
     throw error
   }
