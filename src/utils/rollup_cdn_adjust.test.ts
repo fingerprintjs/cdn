@@ -36,7 +36,11 @@ it('does nothing when the file is a Node module', () => {
 it('replaces proper keywords', () => {
   expect(
     rollupCdnAdjust({
-      replacements: { '[TEST]': 'test()', NAME: '"Bang"', 'window.__fpjs_d_m': 'false' },
+      replacements: {
+        '[TEST]': 'test()',
+        NAME: '"Bang"',
+        'window.__fpjs_d_m': 'false',
+      },
     }).transform?.call(mockPluginContext, mockCode, '/index.js'),
   ).toBe(`import * as foo from 'bar'
 

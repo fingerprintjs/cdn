@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs'
 import * as path from 'path'
-import * as os from 'os'
-import { makeTemporaryDirectory, readFirstCharacters } from './filesystem'
+import { makeTemporaryDirectory, readFirstCharacters, withTemporaryFile } from './filesystem'
 
 describe('makeTemporaryDirectory', () => {
   it('creates a writable directory', async () => {
@@ -28,25 +27,14 @@ describe('readFirstCharacters', () => {
     ' better execution. Make it pop something summery; colourful. I like it, but can the snow look a little warmer' +
     ' can you pimp this powerpoint, need more geometry patterns.' // 716 JavaScript characters
 
-  async function withMockFile<T>(action: (file: string) => Promise<T> | T) {
-    const file = path.join(os.tmpdir(), `${Math.random()}.txt`)
-
-    try {
-      await fs.writeFile(file, mockText)
-      return await action(file)
-    } finally {
-      await fs.rm(file, { force: true })
-    }
-  }
-
   it('reads a not till the end', async () => {
-    await withMockFile(async (file) => {
+    await withTemporaryFile(mockText, async (file) => {
       expect(await readFirstCharacters(file, mockText.length - 100)).toEqual(mockText.slice(0, -100))
     })
   })
 
   it('reads till the end', async () => {
-    await withMockFile(async (file) => {
+    await withTemporaryFile(mockText, async (file) => {
       expect(await readFirstCharacters(file, mockText.length + 100)).toEqual(mockText)
     })
   })
