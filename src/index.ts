@@ -1,6 +1,6 @@
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import * as httpUtil from './utils/http'
-import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexacrVersion } from './router'
+import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexactVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
 
@@ -49,7 +49,7 @@ async function handleInexactProjectVersion({
   project,
   version,
   route,
-}: UriDataInexacrVersion): Promise<CloudFrontResultResponse> {
+}: UriDataInexactVersion): Promise<CloudFrontResultResponse> {
   let exactVersion: string
 
   try {

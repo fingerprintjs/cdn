@@ -18,7 +18,7 @@ export interface UriData {
 }
 
 export type UriDataExactVersion = UriData & { version: ExactVersion }
-export type UriDataInexacrVersion = UriData & { version: InexactVersion }
+export type UriDataInexactVersion = UriData & { version: InexactVersion }
 
 /**
  * Parses a URI of an incoming request.
