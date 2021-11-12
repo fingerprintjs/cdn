@@ -44,7 +44,7 @@ export function test() {
       const result = await buildBundle({
         packageDirectory,
         nodeModules: ['tslib'],
-        format: 'esm',
+        format: 'iife',
         globalVariableName: 'MyTest',
         minify: true,
       })
@@ -74,7 +74,7 @@ export function test() {
 describe('withSandbox', () => {
   it('adds only the given modules', async () => {
     const packageFiles = {
-      'package.json': '{"main":"ind.js"}',
+      'package.json': '{"module":"ind.js"}',
       'ind.js': 'console.log("Hello")',
     }
     const nodeModules = ['tslib', 'rollup']
@@ -105,7 +105,7 @@ describe('withSandbox', () => {
 
   it('clears when complete', async () => {
     const packageFiles = {
-      'package.json': '{"main":"ind.js"}',
+      'package.json': '{"module":"ind.js"}',
       'ind.js': 'console.log("Hello")',
     }
     const nodeModules = ['tslib', 'rollup']

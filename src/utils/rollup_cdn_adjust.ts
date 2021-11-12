@@ -19,10 +19,10 @@ export default function rollupCdnAdjust({ replacements }: Options = {}): Plugin 
     name: 'cdnAdjust',
 
     transform(source, id) {
-      if (!replacements || Object.keys(replacements).length === 0 || isThirdPartyLibrary(id)) {
-        return null
+      if (replacements && Object.keys(replacements).length > 0 && !isThirdPartyLibrary(id)) {
+        return replaceInCode(source, replacements)
       }
-      return replaceInCode(source, replacements)
+      return null
     },
   }
 }

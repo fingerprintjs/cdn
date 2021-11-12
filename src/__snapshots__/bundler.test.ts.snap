@@ -2,7 +2,7 @@
 
 exports[`buildBundle builds minified IIFE and preserves banner 1`] = `
 "// Copyright John Doe 2021
-var r=function(){return r=Object.assign||function(r){for(var t,n=1,o=arguments.length;n<o;n++)for(var a in t=arguments[n])Object.prototype.hasOwnProperty.call(t,a)&&(r[a]=t[a]);return r},r.apply(this,arguments)};function t(){return r({foo:\\"Phu\\"},{bar:\\"Baar\\"})}export{t as test};
+var MyTest=function(r){\\"use strict\\";var t=function(){return t=Object.assign||function(r){for(var t,e=1,n=arguments.length;e<n;e++)for(var o in t=arguments[e])Object.prototype.hasOwnProperty.call(t,o)&&(r[o]=t[o]);return r},t.apply(this,arguments)};return r.test=function(){return t({foo:\\"Phu\\"},{bar:\\"Baar\\"})},Object.defineProperty(r,\\"__esModule\\",{value:!0}),r}({});
 "
 `;
 
