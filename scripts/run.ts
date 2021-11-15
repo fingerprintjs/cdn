@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /*
- * This runs the lambda function locally by emulating a CloudFront request.
+ * This script runs the lambda function locally by emulating a CloudFront request.
  * Prints the result in form of an HTTP request.
  */
 

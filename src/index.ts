@@ -20,7 +20,8 @@ const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
 const monitoringCdnCacheTime = immutableCacheTime
 
 /**
- * The entrypoint of the lambda function
+ * The entrypoint of the lambda function.
+ * The function throws unexpected errors instead of making an error page in order for AWS to record the errors.
  */
 export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(async (event) => {
   const request = event.Records[0].cf.request

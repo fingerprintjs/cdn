@@ -8,7 +8,7 @@ import * as mocks from './utils/mocks'
 let outsideDistDirectory = ''
 let handler: CloudFrontRequestHandler = () => undefined
 
-// Copies the dist directory to an outside location so that it can't access the root node modules.
+// Copies the dist directory to an outside location so that it can't access the project's node modules.
 // Imports the copied distributive lambda to the `handler` variable.
 beforeAll(async () => {
   const distDirectory = path.join(__dirname, '..', 'dist')

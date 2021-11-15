@@ -86,6 +86,10 @@ Fill in the fields during creation:
 - Function name: `opencdn-codegen`
 - Runtime: the latest Node.js
 - Architecture: `x86_64` (Lambda@Edge doesn't support ARM yet)
+- Change default execution role (otherwise the function won't run on Lambda@Edge):
+    - Execution role: `Create a new role from AWS policy templates`
+    - Role name: `opencdn-codegen-role`
+    - Policy templates: `Basic Lambda@Edge permissions (for CloudFront trigge)`
 
 Change the function settings:
 
@@ -97,30 +101,6 @@ The more RAM allocated to a lambda, the more CPU power it has. 1769MB = 1vCPU.
 The asset building speed depends on the allocated RAM linearly.
 256MB is enough, but the time to build FingerprintJS (download from NPM + Rollup + Terser) is about 13 seconds.
 3538MB (2 vCPUs) is a good balance.
-
-Allow the lambda function to be run on Lambda@Edge.
-Go to [IAM / Roles](https://console.aws.amazon.com/iamv2/home#/roles).
-Find the lambda's role (search `opencdn-codegen`).
-Open the role, the "Trust relationships" tab, click "Edit", add the `edgelambda.amazonaws.com` service.
-An example of a whole policy:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "edgelambda.amazonaws.com",
-          "lambda.amazonaws.com"
-        ]
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-```
 
 Connect the lambda function to the distribution.
 Reload the browser page, otherwise the console may ignore the role changes.
@@ -154,3 +134,23 @@ After that you may clear the CloudFront cache:
     If it says "Deploying", then the function hasn't been uploaded to all the Edge locations.
 - Open the "Invalidations" tab, create an invalidation with the `/*` path.
     You can also invalidate individual URLs by changing the path.
+
+### Monitoring
+
+Unexpected errors may happen during lambda execution.
+The function throws all unexpected errors, and CloudFront records the errors.
+
+To see the error rate, go to [AWS / CloudFront / Monitoring](https://console.aws.amazon.com/cloudfront/v3/home#/monitoring),
+select the distribution, click "View distribution metrics", open the "Lambda@Edge errors" tab.
+
+There 2 types of errors:
+
+1. An unhandled exception during the lambda execution
+2. An invalid lambda response
+
+To see the error details, go to [AWS / CloudWatch / Log groups](https://console.aws.amazon.com/cloudwatch/home#logsV2:log-groups).
+Choose a region (the lambda writes the logs to the same region where it runs).
+See these log groups:
+
+- `/aws/lambda/(original lambda region).(lambda name)` for unexpected errors; it also includes all invocations
+- `/aws/cloudfront/LambdaEdge/(distribution id)` for invalid lambda responses
