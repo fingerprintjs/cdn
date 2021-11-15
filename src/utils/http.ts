@@ -38,7 +38,7 @@ export function withBestPractices(
           'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
         },
         !/^3\d\d$/.test(response.status) && {
-          'content-type': [{ value: 'text/plain; charset=UTF-8' }],
+          'content-type': [{ value: 'text/plain; charset=utf-8' }],
           'x-content-type-options': [{ value: 'nosniff' }],
         },
       ),

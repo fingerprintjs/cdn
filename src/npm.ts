@@ -74,6 +74,7 @@ export async function getPackageGreatestVersion(
   let packageInformation: RegistryPackageShortData
 
   try {
+    // todo: Cache the response for a short time
     packageInformation = await got
       .get(getPackageInformationUrl(name), {
         headers: {

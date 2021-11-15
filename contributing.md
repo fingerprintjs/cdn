@@ -19,6 +19,20 @@ yarn run-lambda --uri /fingerprintjs/v3
 yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-body
 ```
 
+Run unit tests:
+
+```bash
+yarn test:unit
+```
+
+Run integration tests that emulate a Lambda@Edge environment.
+They run the real distributive code that performs real requests to NPM:
+
+```bash
+yarn build # Run once after you change the source code
+yarn test:integration
+```
+
 ## Adding a new project to serve
 
 Describe the project in the [src/projects.ts](src/projects.ts) file.

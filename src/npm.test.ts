@@ -85,7 +85,7 @@ describe('getPackageGreatestVersion', () => {
 describe('downloadPackage', () => {
   it('downloads package', async () => {
     // Random names are used to avoid the built-in cache
-    const packageScopelessName = `foo-${String(Math.random()).slice(2)}`
+    const packageScopelessName = `foo-${Math.random().toString(36).slice(2)}`
     const packageName = `@test/${packageScopelessName}`
     nock('https://registry.npmjs.org')
       .get(`/${packageName}/-/${packageScopelessName}-1.2.3.tgz`)
@@ -109,7 +109,7 @@ describe('downloadPackage', () => {
   })
 
   it('caches downloaded packages', async () => {
-    const packageScopelessName = `foo-${String(Math.random()).slice(2)}`
+    const packageScopelessName = `foo-${Math.random().toString(36).slice(2)}`
     const packageName = `@test/${packageScopelessName}`
     // If the function tries to query NPM one more time, nock will emit an error
     nock('https://registry.npmjs.org')
@@ -138,7 +138,7 @@ describe('downloadPackage', () => {
   })
 
   it("throws if the package name or version don't exist", async () => {
-    const packageName = `test-${String(Math.random()).slice(2)}`
+    const packageName = `test-${Math.random().toString(36).slice(2)}`
     nock('https://registry.npmjs.org').get(`/${packageName}/-/${packageName}-4.3.2.tgz`).reply(404)
     await expect(downloadPackage(packageName, '4.3.2')).rejects.toEqual(
       expect.objectContaining({
@@ -163,7 +163,7 @@ describe('downloadPackage', () => {
   })
 
   it('propagates unexpected errors', async () => {
-    const packageName = `test-${String(Math.random()).slice(2)}`
+    const packageName = `test-${Math.random().toString(36).slice(2)}`
     nock('https://registry.npmjs.org').get(`/${packageName}/-/${packageName}-4.3.2.tgz`).reply(403, 'Sorry')
     await expect(downloadPackage(packageName, '4.3.2')).rejects.toEqual(
       expect.objectContaining({

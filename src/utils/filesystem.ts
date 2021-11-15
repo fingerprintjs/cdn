@@ -49,12 +49,25 @@ export async function withTemporaryFiles<T>(
 }
 
 export async function withTemporaryFile<T>(content: string, action: (file: string) => Promise<T> | T): Promise<T> {
-  const file = path.join(os.tmpdir(), `${Math.random()}.txt`)
+  const file = path.join(os.tmpdir(), `fpjs-${Math.random().toString(36).slice(2)}.txt`)
 
   try {
     await fs.writeFile(file, content)
     return await action(file)
   } finally {
     await fs.rm(file, { force: true })
+  }
+}
+
+export async function isDirectory(path: string): Promise<boolean> {
+  try {
+    const fileInfo = await fs.lstat(path)
+    return fileInfo.isDirectory()
+  } catch (error) {
+    // Means that the file doesn't exist
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false
+    }
+    throw error
   }
 }

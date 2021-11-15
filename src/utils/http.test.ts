@@ -8,7 +8,7 @@ describe('withBestPractices', () => {
       headers: {
         'access-control-allow-origin': [{ value: '*' }],
         'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
-        'content-type': [{ value: 'text/plain; charset=UTF-8' }],
+        'content-type': [{ value: 'text/plain; charset=utf-8' }],
         'x-content-type-options': [{ value: 'nosniff' }],
       },
       body: 'Hello',
