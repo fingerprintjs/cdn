@@ -11,15 +11,19 @@ import {
 it('compares versions', () => {
   expect(compareVersions('3.2.1', '3.3.0')).toBe(-1)
   expect(compareVersions('3.2.1', '1.2.3')).toBe(1)
+  expect(compareVersions('3.2.1', '3.3.0')).toBe(-1)
+  expect(compareVersions('3.2.1', '1.2.3')).toBe(1)
   expect(compareVersions('3.2.1', '3.2.0')).toBe(1)
   expect(compareVersions('1.2.4', '1.2.4')).toBe(0)
   expect(compareVersions('3', '3.0.0')).toBe(0)
   expect(compareVersions('3.0.0', '03.0')).toBe(0)
   expect(compareVersions('3', '3.3')).toBe(-1)
   expect(compareVersions('3.6.7', '4')).toBe(-1)
-  expect(compareVersions('1.foo.0', '1.2')).toBe(1)
   expect(compareVersions('3.0-dev.2', '3.0-dev.3')).toBe(-1)
   expect(compareVersions('0.0.0.0.0.0.1', '0.0.0.0.0.1')).toBe(-1)
+  expect(compareVersions('1.8', '1.8.0-beta.1')).toBe(1)
+  expect(compareVersions('1.8', '1.8.0-beta.1', true)).toBe(-1)
+  expect(compareVersions('1.8', '1.7.99-beta.0')).toBe(1)
 })
 
 it('checks that version is in range', () => {
@@ -30,6 +34,10 @@ it('checks that version is in range', () => {
   expect(isVersionInRange({ start: '1.8', end: '2.7' }, '2.7.0')).toBe(false)
   expect(isVersionInRange({ start: '1.8', end: '2.7.0' }, '2.7')).toBe(false)
   expect(isVersionInRange({ start: '1.8', end: '2.7' }, '2.7.0.1')).toBe(false)
+
+  expect(isVersionInRange({ start: '1.8', end: '2.7' }, '2.6.7-beta.89')).toBe(true)
+  expect(isVersionInRange({ start: '1.8', end: '2.7' }, '2.7.0-beta.0')).toBe(false)
+  expect(isVersionInRange({ start: '1.8', end: '2.7' }, '1.8.0-dev.0')).toBe(true)
 
   expect(isVersionInRange({ start: '2.1.3' }, '38.4.3')).toBe(true)
   expect(isVersionInRange({ start: '2.1.3' }, '2.1.2')).toBe(false)
@@ -54,6 +62,8 @@ it('checks that version ranges intersect', () => {
   expect(doVersionRangesIntersect({ start: '3.1' }, { end: '3.1' })).toBe(false)
   expect(doVersionRangesIntersect({ end: '3.1' }, { start: '3.1' })).toBe(false)
   expect(doVersionRangesIntersect({ start: '2.5' }, { end: '2.6' })).toBe(true)
+  expect(doVersionRangesIntersect({ start: '2.5' }, { end: '2.5.0-beta.3' })).toBe(true)
+  expect(doVersionRangesIntersect({ end: '2.5' }, { start: '2.5.0-beta.3' })).toBe(false)
 
   expect(doVersionRangesIntersect({ start: '1.2', end: '2.1' }, {})).toBe(true)
   expect(doVersionRangesIntersect({}, { start: '1.2', end: '2.1' })).toBe(true)
@@ -70,6 +80,7 @@ it('applies conjunction to version ranges', () => {
   expect(int({ start: '1.2' }, { end: '2.2' })).toEqual({ start: '1.2', end: '2.2' })
   expect(int({ start: '1.2' }, { start: '3.1' })).toEqual({ start: '3.1' })
   expect(int({ end: '1.2' }, { end: '3.1' })).toEqual({ end: '1.2' })
+  expect(int({ start: '2.5' }, { end: '2.5.0-beta.3' })).toEqual({ start: '2.5', end: '2.5.0-beta.3' })
   expect(int({}, { start: '0.7.1', end: '1.2' }, {})).toEqual({ start: '0.7.1', end: '1.2' })
   expect(int({}, {}, {})).toEqual({})
 })
