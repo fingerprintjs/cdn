@@ -165,7 +165,9 @@ Create an alarm:
 - Period: `1 minute`
 - Threshold: `Static`, `Greater >`, `0`
 - Additional configuration:
-    - Datapoints to alarm: `1` out of `1`
+    - Datapoints to alarm: `1` out of `3`
+        (the alarm should check for errors at least 3 recent minutes of the metric,
+        because metric data can arrive retroactively, i.e. be written to a past metric history after a delay)
     - Missing data treatment: `Treat missing data as good (not breaching threshold)`
 - Click "Next"
 - Alarm state trigger: `In alarm`
