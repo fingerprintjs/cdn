@@ -154,3 +154,23 @@ See these log groups:
 
 - `/aws/lambda/(original lambda region).(lambda name)` for unexpected errors; it also includes all invocations
 - `/aws/cloudfront/LambdaEdge/(distribution id)` for invalid lambda responses
+
+You can also create an alarm to receive notifications about the errors.
+Go to [AWS / CloudWatch / Alarms](https://console.aws.amazon.com/cloudwatch/home?#alarmsV2:).
+Create an alarm:
+
+- Metric: `CloudFront > Per-Distribution Metrics` — (the distribution id) > `5xxErrorRate`
+- Statistics: `Average`
+- Click "Select metrics"
+- Period: `1 minute`
+- Threshold: `Static`, `Greater >`, `0`
+- Additional configuration:
+    - Datapoints to alarm: `1` out of `1`
+    - Missing data treatment: `Treat missing data as good (not breaching threshold)`
+- Click "Next"
+- Alarm state trigger: `In alarm`
+- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
+- Click "Next"
+- Alarm name: `opencdn-alarm`
+- Alarm description: `An unexpected error in the CDN for open projects (https://github.com/fingerprintjs/cdn)`
+- Click "Next", "Create alarm"
