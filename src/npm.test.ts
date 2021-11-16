@@ -27,10 +27,15 @@ describe('getPackageGreatestVersion', () => {
         Accept: 'application/vnd.npm.install-v1+json',
       },
     })
-      .get('/@fingerprintjs/fingerprintjs')
+      .get('/@fpjs-incubator/botd-agent')
       .reply(200, mockNpmPackageInfo)
-    const version = await getPackageGreatestVersion('@fingerprintjs/fingerprintjs', { start: '3.2', end: '3.3' }, true)
-    expect(version).toEqual('3.2.1')
+    const version = await getPackageGreatestVersion(
+      '@fpjs-incubator/botd-agent',
+      { start: '0.1', end: '0.2' },
+      ['0.1.16', '0.1.17'],
+      true,
+    )
+    expect(version).toEqual('0.1.15')
   })
 
   it('throws if there is no matching version', async () => {
@@ -39,14 +44,14 @@ describe('getPackageGreatestVersion', () => {
         Accept: 'application/vnd.npm.install-v1+json',
       },
     })
-      .get('/@fingerprintjs/fingerprintjs')
+      .get('/@fpjs-incubator/botd-agent')
       .reply(200, mockNpmPackageInfo)
     await expect(
-      getPackageGreatestVersion('@fingerprintjs/fingerprintjs', { start: '3.0', end: '3.1' }, true),
+      getPackageGreatestVersion('@fpjs-incubator/botd-agent', { start: '0.0', end: '0.1' }, undefined, true),
     ).rejects.toEqual(
       expect.objectContaining({
         name: ErrorName.NpmNotFound,
-        message: 'No version of the NPM package matches ≥3.0 and <3.1',
+        message: 'No version of the NPM package matches ≥0.0 and <0.1',
       }),
     )
   })

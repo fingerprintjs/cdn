@@ -42,6 +42,10 @@ describe('parseRequestUri', () => {
     expect(parseRequestUri('/fingerprintjs/v2/esm.min.js')).toBeUndefined()
   })
 
+  it('parses excluded version', () => {
+    expect(parseRequestUri('/botd/v0.1.16/esm.min.js')).toBeUndefined()
+  })
+
   it('parses missing project', () => {
     expect(parseRequestUri('/foo/v2/esm.min.js')).toBeUndefined()
   })

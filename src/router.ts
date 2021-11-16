@@ -81,7 +81,10 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
   } else if (versionUtil.isSemVerVersion(rawVersion)) {
     // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
     for (let i = projectVersions.length - 1; i >= 0; --i) {
-      if (versionUtil.isVersionInRange(projectVersions[i].versionRange, rawVersion)) {
+      if (
+        versionUtil.isVersionInRange(projectVersions[i].versionRange, rawVersion) &&
+        !projectVersions[i].excludeVersions?.includes(rawVersion)
+      ) {
         return {
           ...projectVersions[i],
           requestedType: 'exact',

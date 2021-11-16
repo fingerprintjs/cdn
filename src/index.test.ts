@@ -60,38 +60,38 @@ describe('inexact version', () => {
         Accept: 'application/vnd.npm.install-v1+json',
       },
     })
-      .get('/@fingerprintjs/fingerprintjs')
+      .get('/@fpjs-incubator/botd-agent')
       .reply(200, mocks.mockNpmPackageInfo)
   })
 
   it('handles missing version', async () => {
-    const response = await callHandler('/fingerprintjs/v3.0')
+    const response = await callHandler('/botd/v0.4')
     expect(response).toEqual({
       status: '404',
       statusDescription: 'Not Found',
       headers: expect.objectContaining({}),
-      body: 'There is no version matching 3.0.*',
+      body: 'There is no version matching 0.4.*',
     })
   })
 
   it('redirects to the exact version', async () => {
-    const response = await callHandler('/fingerprintjs/v3.2/umd.js')
+    const response = await callHandler('/botd/v0.1/umd.js')
     expect(response).toEqual({
       status: '302',
       statusDescription: 'Found',
       headers: expect.objectContaining({
-        location: [{ value: '/fingerprintjs/v3.2.1/umd.js' }],
+        location: [{ value: '/botd/v0.1.15/umd.js' }], // Version 0.1.16 is excluded in the project configuration
       }),
     })
   })
 
   it('follows the route redirect', async () => {
-    const response = await callHandler('/fingerprintjs/v3.2')
+    const response = await callHandler('/botd/v0.2')
     expect(response).toEqual({
       status: '302',
       statusDescription: 'Found',
       headers: expect.objectContaining({
-        location: [{ value: '/fingerprintjs/v3.2.1/esm.min.js' }],
+        location: [{ value: '/botd/v0.2.1/esm.min.js' }],
       }),
     })
   })
@@ -125,6 +125,16 @@ describe('exact version', () => {
       statusDescription: 'Not Found',
       headers: expect.objectContaining({}),
       body: 'There is no version 3.2.1',
+    })
+  })
+
+  it('handles excluded version', async () => {
+    const response = await callHandler('/botd/v0.1.16/esm.js') // Excluded in the project configuration
+    expect(response).toEqual({
+      status: '404',
+      statusDescription: 'Not Found',
+      headers: expect.objectContaining({}),
+      body: "The /botd/v0.1.16/esm.js path doesn't exist",
     })
   })
 

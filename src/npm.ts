@@ -67,6 +67,7 @@ const packageDownloads = new Map<string, Promise<string>>()
 export async function getPackageGreatestVersion(
   name: string,
   versionRange?: VersionRange,
+  exclude?: string[],
   onlyStable?: boolean,
 ): Promise<string> {
   // The dynamic importing is used to reduce the initialization time when the library isn't required
@@ -89,7 +90,12 @@ export async function getPackageGreatestVersion(
     throw error
   }
 
-  const greatestVersion = findGreatestVersion(Object.keys(packageInformation.versions), versionRange, onlyStable)
+  const greatestVersion = findGreatestVersion(
+    Object.keys(packageInformation.versions),
+    versionRange,
+    exclude,
+    onlyStable,
+  )
   if (greatestVersion !== undefined) {
     return greatestVersion
   }
@@ -159,6 +165,7 @@ async function downloadPackageRegardless(name: string, version: string): Promise
 function findGreatestVersion(
   versions: string[],
   versionRange?: VersionRange,
+  exclude?: string[],
   onlyStable?: boolean,
 ): string | undefined {
   let greatestVersionIndex: number | undefined
@@ -172,7 +179,8 @@ function findGreatestVersion(
 
     if (
       (!onlyStable || isStableVersion(versions[i])) &&
-      (!versionRange || isVersionInRange(versionRange, versions[i]))
+      (!versionRange || isVersionInRange(versionRange, versions[i])) &&
+      !exclude?.includes(versions[i])
     ) {
       if (greatestVersionIndex === undefined || compareVersions(versions[greatestVersionIndex], versions[i]) < 0) {
         greatestVersionIndex = i
