@@ -102,11 +102,7 @@ The asset building speed depends on the allocated RAM linearly.
 256MB is enough, but the time to build FingerprintJS (download from NPM + Rollup + Terser) is about 13 seconds.
 3538MB (2 vCPUs) is a good balance.
 
-Connect the lambda function to the distribution.
-Reload the browser page, otherwise the console may ignore the role changes.
-Go to [Lambda / Functions](https://console.aws.amazon.com/lambda/home#/functions).
-Open the created function.
-Add a trigger: CloudFront. Fill the fields:
+Add a trigger to the function: CloudFront. Fill the fields:
 
 - Distribution: the created distribution
 - CloudFront event: `Origin request`
@@ -155,13 +151,16 @@ See these log groups:
 - `/aws/lambda/(original lambda region).(lambda name)` for unexpected errors; it also includes all invocations
 - `/aws/cloudfront/LambdaEdge/(distribution id)` for invalid lambda responses
 
-You can also create an alarm to receive notifications about the errors.
+#### Automatic error notifications
+
 Go to [AWS / CloudWatch / Alarms](https://console.aws.amazon.com/cloudwatch/home?#alarmsV2:).
 Create an alarm:
 
-- Metric: `CloudFront > Per-Distribution Metrics` — (the distribution id) > `5xxErrorRate`
-- Statistics: `Average`
-- Click "Select metrics"
+- Metric: `CloudFront > Per-Distribution Metrics`
+    - Metric name: `5xxErrorRate` (if you can't find it, select any and fill it manually on the next step)
+    - Region: `Global`
+    - DistributionId: (the distribution id)
+- Statistic: `Average`
 - Period: `1 minute`
 - Threshold: `Static`, `Greater >`, `0`
 - Additional configuration:
@@ -173,6 +172,87 @@ Create an alarm:
 - Alarm state trigger: `In alarm`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Click "Next"
-- Alarm name: `opencdn-alarm`
-- Alarm description: `An unexpected error in the CDN for open projects (https://github.com/fingerprintjs/cdn)`
+- Alarm name: `opencdn-alarm-5xx`
+- Alarm description: `A 5XX response from the open CDN (https://github.com/fingerprintjs/cdn)`
 - Click "Next", "Create alarm"
+
+If there is a stale cache for a request in CloudFront, and the lambda fails, CloudFront [will return the cache](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/HTTPStatusCodes.html#HTTPStatusCodes-no-custom-error-pages),
+and the alarm won't trigger. So you need 2 more alarms in order not to miss the lambda fails:
+
+1. For unhandled lambda exceptions. Everything is the same except:
+    - Metric name: `LambdaExecutionError`
+    - Alarm name: `opencdn-alarm-lambdaerror`
+    - Alarm description: `An unexpected error in the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+2. For invalid lambda responses. Everything is the same except:
+    - Metric name: `LambdaValidationError`
+    - Alarm name: `opencdn-alarm-lambdainvalid`
+    - Alarm description: `An invalid response from the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+
+See [the CloudFrond documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/viewing-cloudfront-metrics.html) to learn what other metrics can be watched.
+
+#### Watching the lambda execution duration
+
+You need to enable additional metrics (for extra charge from AWS).
+Go to [AWS / CloudFront / Monitoring](https://console.aws.amazon.com/cloudfront/v3/home#/monitoring),
+select the distribution, click "View distribution metrics", click "Enable additional metrics",
+select "Enabled", click "Enable metrics".
+
+Now the "Origin latency" chart is available on the distribution metrics page.
+
+You can create an alarm for it:
+
+- Metric: `CloudFront > Per-Distribution Metrics`
+    - Metric name: `OriginLatency`
+    - Region: `Global`
+    - DistributionId: (the distribution id)
+- Statistic: `p90` (the 90th percentile; [possible statistics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html))
+- Period: `6 hours`
+- Threshold: `Static`, `Greater >`, `3000` (milliseconds)
+- Alarm state trigger: `In alarm`
+- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
+- Alarm name: `opencdn-alarm-originlatency`
+- Alarm description: `Too high execution duration of the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+
+#### Notifications about too many 4XX error
+
+Many 404 errors can be caused by an incorrect redirect.
+It is not a runtime exception, this is an error in the algorithm itself.
+
+Create an alarm:
+
+- Metric: `CloudFront > Per-Distribution Metrics`
+    - Metric name: `4xxErrorRate`
+    - Region: `Global`
+    - DistributionId: (the distribution id)
+- Statistic: `Average`
+- Period: `15 minutes`
+- Threshold: `Static`, `Greater >`, `30`
+- Additional configuration:
+    - Datapoints to alarm: `2` out of `3`
+    - Missing data treatment: `Treat missing data as good (not breaching threshold)`
+- Alarm state trigger: `In alarm`
+- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
+- Alarm name: `opencdn-alarm-4xx`
+- Alarm description: `Too many 4XX responses from the open CDN (https://github.com/fingerprintjs/cdn)`
+
+#### Notifications about steep changes in number of requests
+
+A rapid fall in number of requests can be caused by general problems with the distribution, such as incorrect domain name setup.
+A rapid rise can cause unwanted spending.
+
+Create an alarm:
+
+- Metric: `CloudFront > Per-Distribution Metrics`
+    - Metric name: `Requests`
+    - Region: `Global`
+    - DistributionId: (the distribution id)
+- Statistic: `Sum`
+- Period: `30 minutes` (Custom — 1800 seconds)
+- Threshold: `Anomaly detection`, `Outside of the band`, `3`
+- Additional configuration:
+    - Datapoints to alarm: `2` out of `3`
+    - Missing data treatment: `Treat missing data as bad (breaching threshold)`
+- Alarm state trigger: `In alarm`
+- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
+- Alarm name: `opencdn-alarm-requests`
+- Alarm description: `Unusual number of requests to the open CDN (https://github.com/fingerprintjs/cdn)`
