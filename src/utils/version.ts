@@ -1,3 +1,7 @@
+/**
+ * Version range acts as compatibility range.
+ * For example, version 3.0.0-dev.1 belongs to [3.0, 3.1) and 3.1.0-dev.0 doesn't.
+ */
 export interface VersionRange {
   /** The start version of the range. It's included. If it's undefined, there is no down limit. E.g. '3.2.1' */
   start?: string | undefined
@@ -11,50 +15,52 @@ export interface VersionRange {
  * -1 - the first version is lower than the second version
  *  0 - the versions are equal
  *  1 - the first version is greater than the second version
+ *
+ * Set `unstableFirst` to `true` to make versions with `dev`, `beta`, etc go last when the main version numbers are the
+ * same. It's useful for detecting compatible versions, for example:
+ * `isV3Api = compareVersions('3', version, true) <= 0 && compareVersions('4', version, true) < 0`.
  */
-export function compareVersions(version1: string, version2: string): -1 | 0 | 1 {
-  const [firstPart1, rest1] = extractFirstVersionPart(version1)
-  const [firstPart2, rest2] = extractFirstVersionPart(version2)
+export function compareVersions(version1: string, version2: string, stableFirst?: boolean): -1 | 0 | 1 {
+  if (version1 === version2) {
+    return 0
+  }
 
-  const firstNumber1 = parseInt(firstPart1)
-  const firstNumber2 = parseInt(firstPart2)
+  const [firstPart1, rest1 = ''] = extractFirstVersionPart(version1)
+  const [firstPart2, rest2 = ''] = extractFirstVersionPart(version2)
+  const firstNumber1 = firstPart1 ? Number(firstPart1) : 0
+  const firstNumber2 = firstPart2 ? Number(firstPart2) : 0
+
   if (isNaN(firstNumber1) && isNaN(firstNumber2)) {
-    return 0
-  }
-  if (isNaN(firstNumber1)) {
-    return -1
-  }
-  if (isNaN(firstNumber2)) {
-    return 1
-  }
-  if (firstNumber1 !== firstNumber2) {
-    return firstNumber1 < firstNumber2 ? -1 : 1
+    if (firstPart1 !== firstPart2) {
+      return firstPart1 < firstPart2 ? -1 : 1
+    }
+  } else {
+    if (isNaN(firstNumber1)) {
+      return stableFirst ? 1 : -1
+    }
+    if (isNaN(firstNumber2)) {
+      return stableFirst ? -1 : 1
+    }
+
+    if (firstNumber1 !== firstNumber2) {
+      return firstNumber1 < firstNumber2 ? -1 : 1
+    }
   }
 
-  // The first numbers of the versions are equal, so comparing the rest parts of the versions
-  if (rest1 === undefined && rest2 === undefined) {
-    return 0
-  }
-  if (rest1 === undefined) {
-    return -1
-  }
-  if (rest2 === undefined) {
-    return 1
-  }
-  return compareVersions(rest1, rest2)
+  return compareVersions(rest1, rest2, stableFirst)
 }
 
 export function isVersionInRange(range: VersionRange, version: string): boolean {
   return (
-    (range.start === undefined || compareVersions(range.start, version) <= 0) &&
-    (range.end === undefined || compareVersions(version, range.end) < 0)
+    (range.start === undefined || compareVersions(range.start, version, true) <= 0) &&
+    (range.end === undefined || compareVersions(version, range.end, true) < 0)
   )
 }
 
 export function doVersionRangesIntersect(range1: VersionRange, range2: VersionRange): boolean {
   return (
-    (range1.start === undefined || range2.end === undefined || compareVersions(range1.start, range2.end) < 0) &&
-    (range2.start === undefined || range1.end === undefined || compareVersions(range2.start, range1.end) < 0)
+    (range1.start === undefined || range2.end === undefined || compareVersions(range1.start, range2.end, true) < 0) &&
+    (range2.start === undefined || range1.end === undefined || compareVersions(range2.start, range1.end, true) < 0)
   )
 }
 
@@ -67,10 +73,13 @@ export function intersectVersionRanges(range: VersionRange, ...ranges: VersionRa
   for (const subRange of ranges) {
     if (subRange.start !== undefined) {
       result.start =
-        result.start === undefined || compareVersions(result.start, subRange.start) < 0 ? subRange.start : result.start
+        result.start === undefined || compareVersions(result.start, subRange.start, true) < 0
+          ? subRange.start
+          : result.start
     }
     if (subRange.end !== undefined) {
-      result.end = result.end === undefined || compareVersions(result.end, subRange.end) > 0 ? subRange.end : result.end
+      result.end =
+        result.end === undefined || compareVersions(result.end, subRange.end, true) > 0 ? subRange.end : result.end
     }
   }
   return result
@@ -109,6 +118,6 @@ export function isSemVerVersion(version: string): boolean {
 }
 
 function extractFirstVersionPart(version: string): [first: string, rest?: string] {
-  const pointIndex = version.indexOf('.')
-  return pointIndex === -1 ? [version] : [version.slice(0, pointIndex), version.slice(pointIndex + 1)]
+  const match = /^(.*?)[.-](.*)$/.exec(version)
+  return match ? [match[1], match[2]] : [version]
 }

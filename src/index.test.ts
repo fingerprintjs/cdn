@@ -1,57 +1,183 @@
-/* eslint-disable no-console */
-import { CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
+import * as nock from 'nock'
 import { handler } from './index'
+import * as mocks from './utils/mocks'
 
-// todo: Cover everything with tests
+/*
+ * These tests make no real HTTP requests. The tests with real requests are the "integration" tests.
+ */
 
-async function test() {
-  try {
-    let response: CloudFrontResultResponse
+beforeAll(() => {
+  nock.disableNetConnect()
+})
 
-    try {
-      console.time('Total')
-      response = (await handler(
-        makeMockEvent('/fingerprintjs/v3.3.0/esm.min.js'),
-        makeMockContext(),
-        () => undefined,
-      )) as CloudFrontResultResponse
-    } finally {
-      console.timeEnd('Total')
-    }
+afterAll(() => {
+  nock.enableNetConnect()
+})
 
-    console.log(response.status, response.headers, response.body?.slice(0, 1000))
-  } catch (error) {
-    console.error('Unexpected error')
-    console.error(error)
-  }
+afterEach(() => {
+  nock.cleanAll()
+})
+
+function callHandler(uri: string) {
+  return handler(mocks.makeMockCloudFrontEvent(uri), mocks.makeMockLambdaContext(), () => undefined)
 }
 
-function makeMockEvent(uri: string): CloudFrontRequestEvent {
-  return {
-    Records: [
-      {
-        cf: {
-          config: {
-            distributionDomainName: 'd111111abcdef8.cloudfront.net',
-            distributionId: 'EDFDVBD6EXAMPLE',
-            eventType: 'origin-request',
-            requestId: '4TyzHTaYWb1GX1qTfsHhEqV6HUDd_BzoBZnwfnvQc_1oF26ClkoUSEQ==',
-          },
-          request: {
-            clientIp: '203.0.113.178',
-            headers: {},
-            method: 'GET',
-            querystring: '',
-            uri,
-          },
-        },
+it('makes the root page', async () => {
+  const response = await callHandler('/')
+  expect(response).toEqual({
+    status: '200',
+    headers: {
+      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+\s*$/) }],
+      'access-control-allow-origin': [{ value: '*' }],
+      'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
+      'content-type': [{ value: 'text/plain; charset=utf-8' }],
+      'x-content-type-options': [{ value: 'nosniff' }],
+    },
+    body: 'This is a FingerprintJS CDN',
+  })
+})
+
+it('returns "not found" error', async () => {
+  const response = await callHandler('/not/existing/page')
+  expect(response).toEqual({
+    status: '404',
+    statusDescription: 'Not Found',
+    headers: {
+      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
+      'access-control-allow-origin': [{ value: '*' }],
+      'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
+      'content-type': [{ value: 'text/plain; charset=utf-8' }],
+      'x-content-type-options': [{ value: 'nosniff' }],
+    },
+    body: "The /not/existing/page path doesn't exist",
+  })
+})
+
+describe('inexact version', () => {
+  beforeEach(() => {
+    nock('https://registry.npmjs.org', {
+      reqheaders: {
+        Accept: 'application/vnd.npm.install-v1+json',
       },
-    ],
+    })
+      .get('/@fpjs-incubator/botd-agent')
+      .reply(200, mocks.mockNpmPackageInfo)
+  })
+
+  it('handles missing version', async () => {
+    const response = await callHandler('/botd/v0.4')
+    expect(response).toEqual({
+      status: '404',
+      statusDescription: 'Not Found',
+      headers: expect.objectContaining({}),
+      body: 'There is no version matching 0.4.*',
+    })
+  })
+
+  it('redirects to the exact version', async () => {
+    const response = await callHandler('/botd/v0.1/umd.js')
+    expect(response).toEqual({
+      status: '302',
+      statusDescription: 'Found',
+      headers: expect.objectContaining({
+        location: [{ value: '/botd/v0.1.15/umd.js' }], // Version 0.1.16 is excluded in the project configuration
+      }),
+    })
+  })
+
+  it('follows the route redirect', async () => {
+    const response = await callHandler('/botd/v0.2')
+    expect(response).toEqual({
+      status: '302',
+      statusDescription: 'Found',
+      headers: expect.objectContaining({
+        location: [{ value: '/botd/v0.2.1/esm.min.js' }],
+      }),
+    })
+  })
+})
+
+describe('exact version', () => {
+  it('redirects', async () => {
+    const response = await callHandler('/fingerprintjs/v3.0.1')
+    expect(response).toEqual({
+      status: '301',
+      statusDescription: 'Moved Permanently',
+      headers: expect.objectContaining({
+        location: [{ value: '/fingerprintjs/v3.0.1/esm.min.js' }],
+      }),
+    })
+  })
+
+  it('monitors', async () => {
+    const response = await callHandler('/fingerprintjs/v3.0.1/npm-monitoring')
+    expect(response).toEqual({
+      status: '200',
+      headers: expect.objectContaining({}),
+    })
+  })
+
+  it('handles missing version', async () => {
+    nock('https://registry.npmjs.org').get('/@fingerprintjs/fingerprintjs/-/fingerprintjs-3.2.1.tgz').reply(404)
+    const response = await callHandler('/fingerprintjs/v3.2.1/esm.js')
+    expect(response).toEqual({
+      status: '404',
+      statusDescription: 'Not Found',
+      headers: expect.objectContaining({}),
+      body: 'There is no version 3.2.1',
+    })
+  })
+
+  it('handles excluded version', async () => {
+    const response = await callHandler('/botd/v0.1.16/esm.js') // Excluded in the project configuration
+    expect(response).toEqual({
+      status: '404',
+      statusDescription: 'Not Found',
+      headers: expect.objectContaining({}),
+      body: "The /botd/v0.1.16/esm.js path doesn't exist",
+    })
+  })
+
+  const packageFiles = {
+    'package.json': '{"module": "index.js"}',
+    'index.js': `import {__assign} from 'tslib'
+export function test() {
+  if (!window.__fpjs_d_m) {
+    console.log('Test') // Shall be removed
   }
-}
+  return __assign({}, {})
+}`,
+  }
 
-function makeMockContext() {
-  return {} as unknown as Context
-}
+  it('builds unminified UMD with replacements', async () => {
+    nock('https://registry.npmjs.org')
+      .get('/@fingerprintjs/fingerprintjs/-/fingerprintjs-3.2.1.tgz')
+      .reply(200, mocks.mockNpmPackageDownloadStream(packageFiles), {
+        'Content-Type': 'application/octet-stream',
+      })
+    const response = await callHandler('/fingerprintjs/v3.2.1/umd.js')
+    expect(response).toEqual({
+      status: '200',
+      headers: expect.objectContaining({
+        'content-type': [{ value: 'text/javascript; charset=utf-8' }],
+      }),
+      body: expect.anything(),
+    })
+    expect(response?.body).toMatchSnapshot()
+  })
 
-test()
+  it('builds minified ESM', async () => {
+    nock('https://registry.npmjs.org')
+      .get('/@fpjs-incubator/botd-agent/-/botd-agent-0.1.20.tgz')
+      .reply(200, mocks.mockNpmPackageDownloadStream(packageFiles), {
+        'Content-Type': 'application/octet-stream',
+      })
+    const response = await callHandler('/botd/v0.1.20/esm.min.js')
+    expect(response).toEqual({
+      status: '200',
+      headers: expect.objectContaining({}),
+      body: expect.anything(),
+    })
+    expect(response?.body).toMatchSnapshot()
+  })
+})

@@ -10,10 +10,27 @@ Download the repository code, open a terminal in the repository root and run:
 yarn install
 ```
 
-The only way to run the function at the moment is running the tests:
+Emulate a CloudFront request and see the response produced by the code:
 
 ```bash
-yarn test
+yarn run-lambda --uri /fingerprintjs/v3
+
+# See the full response body:
+yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-body
+```
+
+Run unit tests:
+
+```bash
+yarn test:unit
+```
+
+Run integration tests that emulate a Lambda@Edge environment.
+They run the real distributive code that performs real requests to NPM:
+
+```bash
+yarn build # Run once after you change the source code
+yarn test:integration
 ```
 
 ## Adding a new project to serve
@@ -69,6 +86,10 @@ Fill in the fields during creation:
 - Function name: `opencdn-codegen`
 - Runtime: the latest Node.js
 - Architecture: `x86_64` (Lambda@Edge doesn't support ARM yet)
+- Change default execution role (otherwise the function won't run on Lambda@Edge):
+    - Execution role: `Create a new role from AWS policy templates`
+    - Role name: `opencdn-codegen-role`
+    - Policy templates: `Basic Lambda@Edge permissions (for CloudFront trigge)`
 
 Change the function settings:
 
@@ -80,30 +101,6 @@ The more RAM allocated to a lambda, the more CPU power it has. 1769MB = 1vCPU.
 The asset building speed depends on the allocated RAM linearly.
 256MB is enough, but the time to build FingerprintJS (download from NPM + Rollup + Terser) is about 13 seconds.
 3538MB (2 vCPUs) is a good balance.
-
-Allow the lambda function to be run on Lambda@Edge.
-Go to [IAM / Roles](https://console.aws.amazon.com/iamv2/home#/roles).
-Find the lambda's role (search `opencdn-codegen`).
-Open the role, the "Trust relationships" tab, click "Edit", add the `edgelambda.amazonaws.com` service.
-An example of a whole policy:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "edgelambda.amazonaws.com",
-          "lambda.amazonaws.com"
-        ]
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-```
 
 Connect the lambda function to the distribution.
 Reload the browser page, otherwise the console may ignore the role changes.
@@ -137,3 +134,45 @@ After that you may clear the CloudFront cache:
     If it says "Deploying", then the function hasn't been uploaded to all the Edge locations.
 - Open the "Invalidations" tab, create an invalidation with the `/*` path.
     You can also invalidate individual URLs by changing the path.
+
+### Monitoring
+
+Unexpected errors may happen during lambda execution.
+The function throws all unexpected errors, and CloudFront records the errors.
+
+To see the error rate, go to [AWS / CloudFront / Monitoring](https://console.aws.amazon.com/cloudfront/v3/home#/monitoring),
+select the distribution, click "View distribution metrics", open the "Lambda@Edge errors" tab.
+
+There 2 types of errors:
+
+1. An unhandled exception during the lambda execution
+2. An invalid lambda response
+
+To see the error details, go to [AWS / CloudWatch / Log groups](https://console.aws.amazon.com/cloudwatch/home#logsV2:log-groups).
+Choose a region (the lambda writes the logs to the same region where it runs).
+See these log groups:
+
+- `/aws/lambda/(original lambda region).(lambda name)` for unexpected errors; it also includes all invocations
+- `/aws/cloudfront/LambdaEdge/(distribution id)` for invalid lambda responses
+
+You can also create an alarm to receive notifications about the errors.
+Go to [AWS / CloudWatch / Alarms](https://console.aws.amazon.com/cloudwatch/home?#alarmsV2:).
+Create an alarm:
+
+- Metric: `CloudFront > Per-Distribution Metrics` — (the distribution id) > `5xxErrorRate`
+- Statistics: `Average`
+- Click "Select metrics"
+- Period: `1 minute`
+- Threshold: `Static`, `Greater >`, `0`
+- Additional configuration:
+    - Datapoints to alarm: `1` out of `3`
+        (the alarm should check for errors at least 3 recent minutes of the metric,
+        because metric data can arrive retroactively, i.e. be written to a past metric history after a delay)
+    - Missing data treatment: `Treat missing data as good (not breaching threshold)`
+- Click "Next"
+- Alarm state trigger: `In alarm`
+- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
+- Click "Next"
+- Alarm name: `opencdn-alarm`
+- Alarm description: `An unexpected error in the CDN for open projects (https://github.com/fingerprintjs/cdn)`
+- Click "Next", "Create alarm"

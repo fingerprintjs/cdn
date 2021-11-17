@@ -1,9 +1,8 @@
 import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import * as httpUtil from './utils/http'
-import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexacrVersion } from './router'
+import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexactVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
 import { intersectVersionRanges } from './utils/version'
-import { withBestPractices } from './utils/http'
 
 const oneMinute = 60 * 1000
 const oneHour = oneMinute * 60
@@ -21,9 +20,10 @@ const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
 const monitoringCdnCacheTime = immutableCacheTime
 
 /**
- * The entrypoint of the lambda function
+ * The entrypoint of the lambda function.
+ * The function throws unexpected errors instead of making an error page in order for AWS to record the errors.
  */
-export const handler: CloudFrontRequestHandler = withBestPractices(async (event) => {
+export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(async (event) => {
   const request = event.Records[0].cf.request
   if (request.uri === '/') {
     return {
@@ -50,20 +50,18 @@ async function handleInexactProjectVersion({
   project,
   version,
   route,
-}: UriDataInexacrVersion): Promise<CloudFrontResultResponse> {
+}: UriDataInexactVersion): Promise<CloudFrontResultResponse> {
   let exactVersion: string
 
   try {
     exactVersion = await getPackageGreatestVersion(
       version.npmPackage,
       intersectVersionRanges(version.versionRange, version.requestedRange),
+      version.excludeVersions,
       true,
     )
   } catch (error) {
-    if (
-      error instanceof Error &&
-      [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
-    ) {
+    if (isNpmNotFoundError(error)) {
       return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
     }
     throw error
@@ -71,13 +69,7 @@ async function handleInexactProjectVersion({
 
   // If the route is a redirect, follow that redirect to make browser do 1 redirect instead of 2
   const redirectUri = makeRequestUri(project.key, exactVersion, route.type === 'redirect' ? route.target : route.path)
-  return {
-    ...httpUtil.temporaryRedirectStatus,
-    headers: {
-      ...httpUtil.makeCacheHeaders(tempRedirectBrowserCacheTime, tempRedirectCdnCacheTime),
-      location: [{ value: redirectUri }],
-    },
-  }
+  return makeRedirectResponse(redirectUri, false)
 }
 
 async function handleExactProjectVersion({
@@ -87,13 +79,7 @@ async function handleExactProjectVersion({
 }: UriDataExactVersion): Promise<CloudFrontResultResponse> {
   if (route.type === 'redirect') {
     const redirectUri = makeRequestUri(project.key, version.requestedVersion, route.target)
-    return {
-      ...httpUtil.permanentRedirectStatus,
-      headers: {
-        ...httpUtil.makeCacheHeaders(immutableCacheTime),
-        location: [{ value: redirectUri }],
-      },
-    }
+    return makeRedirectResponse(redirectUri, true)
   }
 
   if (route.type === 'monitoring') {
@@ -105,10 +91,7 @@ async function handleExactProjectVersion({
 
   const [packageDirectory, buildBundle] = await Promise.all([
     downloadPackage(version.npmPackage, version.requestedVersion).catch((error) => {
-      if (
-        error instanceof Error &&
-        [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
-      ) {
+      if (isNpmNotFoundError(error)) {
         return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
       }
       throw error
@@ -143,10 +126,27 @@ async function handleExactProjectVersion({
   }
 }
 
+function makeRedirectResponse(uri: string, isPermanent: boolean): CloudFrontResultResponse {
+  return {
+    ...(isPermanent ? httpUtil.permanentRedirectStatus : httpUtil.temporaryRedirectStatus),
+    headers: {
+      ...httpUtil.makeCacheHeaders(
+        isPermanent ? immutableCacheTime : tempRedirectBrowserCacheTime,
+        isPermanent ? undefined : tempRedirectCdnCacheTime,
+      ),
+      location: [{ value: uri }],
+    },
+  }
+}
+
 function makeNotFoundResponse(message: string): CloudFrontResultResponse {
   return {
     ...httpUtil.notFoundStatus,
     headers: httpUtil.makeCacheHeaders(notFoundBrowserCacheTime, notFoundCdnCacheTime),
     body: message,
   }
+}
+
+function isNpmNotFoundError(error: unknown) {
+  return error instanceof Error && [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
 }

@@ -18,7 +18,7 @@ export interface UriData {
 }
 
 export type UriDataExactVersion = UriData & { version: ExactVersion }
-export type UriDataInexacrVersion = UriData & { version: InexactVersion }
+export type UriDataInexactVersion = UriData & { version: InexactVersion }
 
 /**
  * Parses a URI of an incoming request.
@@ -64,9 +64,7 @@ export function makeRequestUri(projectKey: string, version: string, routePath: s
 }
 
 function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: string): UriData['version'] | undefined {
-  const isInexactVersion = /^\d+(\.\d+)?$/.test(rawVersion)
-
-  if (isInexactVersion) {
+  if (isInexactVersion(rawVersion)) {
     const requestedRange = { start: rawVersion, end: versionUtil.getNextVersion(rawVersion) }
     if (requestedRange.end) {
       // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
@@ -83,7 +81,10 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
   } else if (versionUtil.isSemVerVersion(rawVersion)) {
     // The versions inside the project are expected to be listed in ascending order, and we prefer the latest versions
     for (let i = projectVersions.length - 1; i >= 0; --i) {
-      if (versionUtil.isVersionInRange(projectVersions[i].versionRange, rawVersion)) {
+      if (
+        versionUtil.isVersionInRange(projectVersions[i].versionRange, rawVersion) &&
+        !projectVersions[i].excludeVersions?.includes(rawVersion)
+      ) {
         return {
           ...projectVersions[i],
           requestedType: 'exact',
@@ -94,4 +95,8 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
   }
 
   return undefined
+}
+
+function isInexactVersion(rawVersion: string) {
+  return /^(0|[1-9]\d*)(\.(0|[1-9]\d*))?$/.test(rawVersion)
 }

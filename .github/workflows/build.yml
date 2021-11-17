@@ -23,10 +23,12 @@ jobs:
         run: yarn install
       - name: Lint
         run: yarn lint
+      - name: Unit tests
+        run: yarn test:unit
       - name: Build
         run: yarn build
-      - name: Test the basic ability to run the distributive code
-        run: yarn test:dist-can-run
+      - name: Integration tests
+        run: yarn test:integration
       - name: Make an archive for AWS Lambda and save it as an artifact
         uses: actions/upload-artifact@v2
         with:

@@ -13,6 +13,8 @@ export interface ProjectVersion {
   npmPackage: string
   /** The versions to serve */
   versionRange: VersionRange
+  /** The versions not to serve (e.g. invalid Node packages) */
+  excludeVersions?: string[]
   /**
    * The files to serve in this version. The keys are the URL paths going after the version, they may include slashes.
    */
@@ -89,7 +91,8 @@ export const projects: Record<string, Project> = {
     versions: [
       {
         npmPackage: '@fpjs-incubator/botd-agent',
-        versionRange: {},
+        versionRange: { start: '0.1.6' }, // The older versions have invalid Node packages
+        excludeVersions: ['0.1.10', '0.1.16', '0.1.16-beta.0'],
         routes: {
           '': { type: 'redirect', target: 'esm.min.js' },
           'iife.js': { ...botdRouteCommon, format: 'iife' },

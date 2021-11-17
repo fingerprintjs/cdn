@@ -42,8 +42,10 @@ export default function buildBundle({
 /**
  * Creates a temporary directory and symlinks the package and the node modules into it.
  * Removes the directory after the action completes.
+ *
+ * @internal Exported only for the tests
  */
-async function withSandbox<T>(
+export async function withSandbox<T>(
   packageDirectory: string,
   nodeModules: string[],
   action: (sandboxDirectory: string, packageDirectory: string) => Promise<T> | T,
@@ -73,9 +75,11 @@ async function withSandbox<T>(
 }
 
 /**
- * Gets the entry point module file of the NPM package
+ * Gets the entry point module file of the NPM
+ *
+ * @internal Exported only for the tests
  */
-async function getPackageModulePath(packageDirectory: string): Promise<string> {
+export async function getPackageModulePath(packageDirectory: string): Promise<string> {
   const packageJsonContent = await fs.readFile(path.join(packageDirectory, 'package.json'), 'utf8')
   const packageDescription = JSON.parse(packageJsonContent)
 
@@ -101,7 +105,12 @@ async function getPackageModulePath(packageDirectory: string): Promise<string> {
   throw new Error('The package has no main module file')
 }
 
-async function buildCodeBody(
+/**
+ * Builds the JS code from the given entry file
+ *
+ * @internal Exported only for the tests
+ */
+export async function buildCodeBody(
   sandboxDirectory: string,
   entryFilePath: string,
   format: rollup.ModuleFormat,
@@ -138,11 +147,16 @@ async function buildCodeBody(
   return output[0].code
 }
 
-async function getCodeBanner(filePath: string) {
+/**
+ * Extracts the copyright comment from the JS file
+ *
+ * @internal Exported only for the tests
+ */
+export async function getCodeBanner(filePath: string) {
   const fileContent = await readFirstCharacters(filePath, 1024)
 
   // The expression matches either a group of //-comments with no empty lines in between, or a /**/ comment.
   // The comments are expected to stand at the start of the file.
   const bannerMatch = /^\s*(\/\*[\s\S]*?\*\/|((^|\r\n|\r|\n)[ \t]*\/\/.*)+)/.exec(fileContent)
-  return bannerMatch ? bannerMatch[1] : ''
+  return bannerMatch ? bannerMatch[1].trim() : ''
 }
