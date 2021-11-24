@@ -13,7 +13,7 @@ const immutableCacheTime = oneYear
 // 1. Somebody requests an exact version that doesn't exists, CloudFront caches the 404 response;
 // 2. The exact version is published and the inexact endpoint redirects to it.
 const notFoundBrowserCacheTime = oneHour
-const notFoundCdnCacheTime = oneMinute * 5
+const tempNotFoundCdnCacheTime = oneMinute * 5
 const tempRedirectBrowserCacheTime = oneDay * 7
 const tempRedirectCdnCacheTime = oneHour
 const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
@@ -35,7 +35,7 @@ export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(asyn
 
   const uriData = parseRequestUri(request.uri)
   if (!uriData) {
-    return makeNotFoundResponse(`The ${request.uri} path doesn't exist`)
+    return makeNotFoundResponse(`The ${request.uri} path doesn't exist`, true)
   }
 
   // TypeScript doesn't guards the type if `uriData.version.requestedType === 'inexact'` is used
@@ -62,7 +62,7 @@ async function handleInexactProjectVersion({
     )
   } catch (error) {
     if (isNpmNotFoundError(error)) {
-      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`)
+      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`, false)
     }
     throw error
   }
@@ -92,7 +92,7 @@ async function handleExactProjectVersion({
   const [packageDirectory, buildBundle] = await Promise.all([
     downloadPackage(version.npmPackage, version.requestedVersion).catch((error) => {
       if (isNpmNotFoundError(error)) {
-        return makeNotFoundResponse(`There is no version ${version.requestedVersion}`)
+        return makeNotFoundResponse(`There is no version ${version.requestedVersion}`, false)
       }
       throw error
     }),
@@ -132,17 +132,24 @@ function makeRedirectResponse(uri: string, isPermanent: boolean): CloudFrontResu
     headers: {
       ...httpUtil.makeCacheHeaders(
         isPermanent ? immutableCacheTime : tempRedirectBrowserCacheTime,
-        isPermanent ? undefined : tempRedirectCdnCacheTime,
+        isPermanent ? immutableCacheTime : tempRedirectCdnCacheTime,
       ),
       location: [{ value: uri }],
     },
   }
 }
 
-function makeNotFoundResponse(message: string): CloudFrontResultResponse {
+/**
+ * Set `isPermanent` to true if the resource can not appear later by itself,
+ * i.e. if the resource can appear only after changing the lambda code.
+ */
+function makeNotFoundResponse(message: string, isPermanent: boolean): CloudFrontResultResponse {
   return {
     ...httpUtil.notFoundStatus,
-    headers: httpUtil.makeCacheHeaders(notFoundBrowserCacheTime, notFoundCdnCacheTime),
+    headers: httpUtil.makeCacheHeaders(
+      notFoundBrowserCacheTime,
+      isPermanent ? immutableCacheTime : tempNotFoundCdnCacheTime,
+    ),
     body: message,
   }
 }
