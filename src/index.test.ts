@@ -1,3 +1,4 @@
+import { CloudFrontRequestResult } from 'aws-lambda'
 import * as nock from 'nock'
 import { handler } from './index'
 import * as mocks from './utils/mocks'
@@ -18,16 +19,12 @@ afterEach(() => {
   nock.cleanAll()
 })
 
-function callHandler(uri: string) {
-  return handler(mocks.makeMockCloudFrontEvent(uri), mocks.makeMockLambdaContext(), () => undefined)
-}
-
 it('makes the root page', async () => {
   const response = await callHandler('/')
   expect(response).toEqual({
     status: '200',
     headers: {
-      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+\s*$/) }],
+      'cache-control': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
@@ -35,6 +32,7 @@ it('makes the root page', async () => {
     },
     body: 'This is a FingerprintJS CDN',
   })
+  checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
 })
 
 it('returns "not found" error', async () => {
@@ -43,7 +41,8 @@ it('returns "not found" error', async () => {
     status: '404',
     statusDescription: 'Not Found',
     headers: {
-      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
+      'cache-control': [{ value: expect.anything() }],
+      'last-modified': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
@@ -51,6 +50,7 @@ it('returns "not found" error', async () => {
     },
     body: "The /not/existing/page path doesn't exist",
   })
+  checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMin: 1000 * 60 * 60 * 24 * 30 })
 })
 
 describe('inexact version', () => {
@@ -72,6 +72,7 @@ describe('inexact version', () => {
       headers: expect.objectContaining({}),
       body: 'There is no version matching 0.4.*',
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMax: 1000 * 60 * 10 })
   })
 
   it('redirects to the exact version', async () => {
@@ -83,6 +84,7 @@ describe('inexact version', () => {
         location: [{ value: '/botd/v0.1.15/umd.js' }], // Version 0.1.16 is excluded in the project configuration
       }),
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMax: 1000 * 60 * 60 * 24 })
   })
 
   it('follows the route redirect', async () => {
@@ -94,6 +96,7 @@ describe('inexact version', () => {
         location: [{ value: '/botd/v0.2.1/esm.min.js' }],
       }),
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMax: 1000 * 60 * 60 * 24 })
   })
 })
 
@@ -107,6 +110,7 @@ describe('exact version', () => {
         location: [{ value: '/fingerprintjs/v3.0.1/esm.min.js' }],
       }),
     })
+    checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
   it('monitors', async () => {
@@ -115,6 +119,7 @@ describe('exact version', () => {
       status: '200',
       headers: expect.objectContaining({}),
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
   it('handles missing version', async () => {
@@ -126,6 +131,7 @@ describe('exact version', () => {
       headers: expect.objectContaining({}),
       body: 'There is no version 3.2.1',
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMax: 1000 * 60 * 10 })
   })
 
   it('handles excluded version', async () => {
@@ -136,6 +142,7 @@ describe('exact version', () => {
       headers: expect.objectContaining({}),
       body: "The /botd/v0.1.16/esm.js path doesn't exist",
     })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
   const packageFiles = {
@@ -164,6 +171,7 @@ export function test() {
       body: expect.anything(),
     })
     expect(response?.body).toMatchSnapshot()
+    checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
   it('builds minified ESM', async () => {
@@ -181,3 +189,43 @@ export function test() {
     expect(response?.body).toMatchSnapshot()
   })
 })
+
+function callHandler(uri: string) {
+  return handler(mocks.makeMockCloudFrontEvent(uri), mocks.makeMockLambdaContext(), () => undefined)
+}
+
+function checkCacheHeaders(
+  response: CloudFrontRequestResult | void,
+  options: { browserMin?: number; browserMax?: number; cdnMin?: number; cdnMax?: number },
+) {
+  expect(response?.headers?.['cache-control']?.length || 0).toBe(1)
+  const cacheControlHeader = response?.headers?.['cache-control'][0].value || ''
+  let browserCacheTime: number
+  let cdnCacheTime: number
+
+  let match = /^\s*public,\s*max-age=(\d+),\s*s-maxage=(\d+)\s*$/.exec(cacheControlHeader)
+  if (match) {
+    browserCacheTime = Number(match[1]) * 1000
+    cdnCacheTime = Number(match[2]) * 1000
+  } else {
+    match = /^\s*public,\s*max-age=(\d+)\s*$/.exec(cacheControlHeader)
+    if (match) {
+      browserCacheTime = cdnCacheTime = Number(match[1]) * 1000
+    } else {
+      throw new Error('Unexpected Cache-Control header value')
+    }
+  }
+
+  if (options.browserMin !== undefined) {
+    expect(browserCacheTime).toBeGreaterThanOrEqual(options.browserMin)
+  }
+  if (options.browserMax !== undefined) {
+    expect(browserCacheTime).toBeLessThanOrEqual(options.browserMax)
+  }
+  if (options.cdnMin !== undefined) {
+    expect(cdnCacheTime).toBeGreaterThanOrEqual(options.cdnMin)
+  }
+  if (options.cdnMax !== undefined) {
+    expect(cdnCacheTime).toBeLessThanOrEqual(options.cdnMax)
+  }
+}
