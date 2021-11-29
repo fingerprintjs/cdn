@@ -37,6 +37,7 @@ function parseInput() {
 }
 
 function printResponse(response: CloudFrontResultResponse, fullBody: boolean) {
+  console.log('Response:')
   console.log('')
   console.log(`HTTP/2 ${response.status} ${response.statusDescription ?? 'OK'}`)
   for (const [name, values] of Object.entries(response.headers || {})) {

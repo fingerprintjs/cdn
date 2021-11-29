@@ -1,9 +1,10 @@
 import { makeCacheHeaders, okStatus, temporaryRedirectStatus, withBestPractices } from './http'
-import { makeMockCloudFrontEvent } from './mocks'
+import { makeMockCloudFrontEvent, makeMockLambdaContext } from './mocks'
 
 describe('withBestPractices', () => {
   it('handles missing headers', async () => {
-    expect(await withBestPractices(() => ({ ...okStatus, body: 'Hello' }))(makeMockCloudFrontEvent('/'))).toEqual({
+    const handler = withBestPractices(async () => ({ ...okStatus, body: 'Hello' }))
+    expect(await handler(makeMockCloudFrontEvent('/'), makeMockLambdaContext())).toEqual({
       status: '200',
       headers: {
         'access-control-allow-origin': [{ value: '*' }],
@@ -16,12 +17,11 @@ describe('withBestPractices', () => {
   })
 
   it("doesn't replace the headers", async () => {
-    expect(
-      await withBestPractices(() => ({
-        ...okStatus,
-        headers: { 'content-type': [{ value: 'text/javascript' }], 'access-control-allow-origin': [] },
-      }))(makeMockCloudFrontEvent('/foo')),
-    ).toEqual({
+    const handler = withBestPractices(async () => ({
+      ...okStatus,
+      headers: { 'content-type': [{ value: 'text/javascript' }], 'access-control-allow-origin': [] },
+    }))
+    expect(await handler(makeMockCloudFrontEvent('/foo'), makeMockLambdaContext())).toEqual({
       status: '200',
       headers: {
         'access-control-allow-origin': [{ value: '*' }],
@@ -33,11 +33,11 @@ describe('withBestPractices', () => {
   })
 
   it('handles redirects', async () => {
-    expect(
-      await withBestPractices(() => ({ ...temporaryRedirectStatus, headers: { location: [{ value: '/foo/bar' }] } }))(
-        makeMockCloudFrontEvent('/foo'),
-      ),
-    ).toEqual({
+    const handler = withBestPractices(async () => ({
+      ...temporaryRedirectStatus,
+      headers: { location: [{ value: '/foo/bar' }] },
+    }))
+    expect(await handler(makeMockCloudFrontEvent('/foo'), makeMockLambdaContext())).toEqual({
       status: '302',
       statusDescription: 'Found',
       headers: {
