@@ -61,6 +61,11 @@ const registryUrl = 'https://registry.npmjs.org'
  */
 const packageDownloads = new Map<string, Promise<string>>()
 
+const gotCommonOptions = {
+  retry: 2, // The first try isn't counted as a retry
+  timeout: 5000, // Applies to each tries separately
+}
+
 /**
  * Fetches the number of the latest package version from an NPM registry.
  * Returns `undefined` when there is no appropriate version.
@@ -79,6 +84,7 @@ export async function getPackageGreatestVersion(
     // todo: Cache the response for a short time
     packageInformation = await got
       .get(getPackageInformationUrl(name), {
+        ...gotCommonOptions,
         headers: {
           Accept: 'application/vnd.npm.install-v1+json', // Makes the registry return only the necessary data
         },
@@ -124,7 +130,7 @@ async function downloadPackageRegardless(name: string, version: string): Promise
 
   try {
     await promisify(stream.pipeline)(
-      got.stream(getPackageTarballUrl(name, version), { retry: 3, timeout: 10000 }),
+      got.stream(getPackageTarballUrl(name, version), gotCommonOptions),
       zlib.createGunzip(),
       tar.extract(directory, {
         strict: false,
