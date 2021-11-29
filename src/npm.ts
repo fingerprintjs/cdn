@@ -62,14 +62,15 @@ const registryUrl = 'https://registry.npmjs.org'
 const packageDownloads = new Map<string, Promise<string>>()
 
 /**
- * Fetches the number of the latest package version from an NPM registry
+ * Fetches the number of the latest package version from an NPM registry.
+ * Returns `undefined` when there is no appropriate version.
  */
 export async function getPackageGreatestVersion(
   name: string,
   versionRange?: VersionRange,
   exclude?: string[],
   onlyStable?: boolean,
-): Promise<string> {
+): Promise<string | undefined> {
   // The dynamic importing is used to reduce the initialization time when the library isn't required
   const { default: got } = await import('got')
   let packageInformation: RegistryPackageShortData
@@ -90,25 +91,7 @@ export async function getPackageGreatestVersion(
     throw error
   }
 
-  const greatestVersion = findGreatestVersion(
-    Object.keys(packageInformation.versions),
-    versionRange,
-    exclude,
-    onlyStable,
-  )
-  if (greatestVersion !== undefined) {
-    return greatestVersion
-  }
-
-  throw createError(
-    ErrorName.NpmNotFound,
-    versionRange?.start || versionRange?.end
-      ? 'No version of the NPM package matches ' +
-          [versionRange?.start && `≥${versionRange.start}`, versionRange?.end && `<${versionRange.end}`]
-            .filter(Boolean)
-            .join(' and ')
-      : 'The NPM package has no versions',
-  )
+  return findGreatestVersion(Object.keys(packageInformation.versions), versionRange, exclude, onlyStable)
 }
 
 /**

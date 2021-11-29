@@ -38,7 +38,7 @@ describe('getPackageGreatestVersion', () => {
     expect(version).toEqual('0.1.15')
   })
 
-  it('throws if there is no matching version', async () => {
+  it('returns `undefined` if there is no matching version', async () => {
     nock('https://registry.npmjs.org', {
       reqheaders: {
         Accept: 'application/vnd.npm.install-v1+json',
@@ -46,14 +46,13 @@ describe('getPackageGreatestVersion', () => {
     })
       .get('/@fpjs-incubator/botd-agent')
       .reply(200, mockNpmPackageInfo)
-    await expect(
-      getPackageGreatestVersion('@fpjs-incubator/botd-agent', { start: '0.0', end: '0.1' }, undefined, true),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        name: ErrorName.NpmNotFound,
-        message: 'No version of the NPM package matches ≥0.0 and <0.1',
-      }),
+    const version = await getPackageGreatestVersion(
+      '@fpjs-incubator/botd-agent',
+      { start: '0.0', end: '0.1' },
+      undefined,
+      true,
     )
+    expect(version).toBeUndefined()
   })
 
   it("throws if the package name doesn't exist", async () => {

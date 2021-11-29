@@ -51,20 +51,15 @@ async function handleInexactProjectVersion({
   version,
   route,
 }: UriDataInexactVersion): Promise<CloudFrontResultResponse> {
-  let exactVersion: string
+  const exactVersion = await getPackageGreatestVersion(
+    version.npmPackage,
+    intersectVersionRanges(version.versionRange, version.requestedRange),
+    version.excludeVersions,
+    true,
+  )
 
-  try {
-    exactVersion = await getPackageGreatestVersion(
-      version.npmPackage,
-      intersectVersionRanges(version.versionRange, version.requestedRange),
-      version.excludeVersions,
-      true,
-    )
-  } catch (error) {
-    if (isNpmNotFoundError(error)) {
-      return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`, false)
-    }
-    throw error
+  if (exactVersion === undefined) {
+    return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`, false)
   }
 
   // If the route is a redirect, follow that redirect to make browser do 1 redirect instead of 2
