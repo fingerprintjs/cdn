@@ -1,4 +1,4 @@
-import { CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
+import { CloudFrontRequestEvent, CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import * as httpUtil from './utils/http'
 import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexactVersion } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
@@ -24,6 +24,8 @@ const monitoringCdnCacheTime = immutableCacheTime
  * The function throws unexpected errors instead of making an error page in order for AWS to record the errors.
  */
 export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(async (event) => {
+  logEvent(event)
+
   const request = event.Records[0].cf.request
   if (request.uri === '/') {
     return {
@@ -151,4 +153,19 @@ function makeNotFoundResponse(message: string, isPermanent: boolean): CloudFront
 
 function isNpmNotFoundError(error: unknown) {
   return error instanceof Error && [NpmError.NpmNotFound, NpmError.InvalidVersionName].includes(error.name as NpmError)
+}
+
+/**
+ * Logs the event data to know what the request URI was in case of an unexpected error
+ */
+function logEvent(event: CloudFrontRequestEvent) {
+  // Remove the unnecessary data to reduce the log size
+  const data = event.Records.map((record) => ({
+    ...record.cf,
+    request: { ...record.cf.request, headers: '(omitted)', origin: '(omitted)' },
+  }))
+
+  // Lambda writes the console output to CloudWatch
+  // eslint-disable-next-line no-console
+  console.log(`CloudFront event: ${JSON.stringify(data, null, 2)}`)
 }

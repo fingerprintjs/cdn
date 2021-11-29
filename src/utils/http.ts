@@ -1,6 +1,8 @@
-import { CloudFrontHeaders, CloudFrontRequestEvent, CloudFrontResultResponse } from 'aws-lambda'
+import { CloudFrontHeaders, CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
 
 type Status = Pick<CloudFrontResultResponse, 'status' | 'statusDescription'>
+
+type AsyncCloudFrontHandler = (event: CloudFrontRequestEvent, context: Context) => Promise<CloudFrontResultResponse>
 
 export const okStatus: Status = {
   status: '200',
@@ -24,11 +26,9 @@ export const notFoundStatus: Status = {
 /**
  * A common HTTP middleware that applies best CDN practices
  */
-export function withBestPractices(
-  next: (event: CloudFrontRequestEvent) => Promise<CloudFrontResultResponse> | CloudFrontResultResponse,
-): (event: CloudFrontRequestEvent) => Promise<CloudFrontResultResponse> {
-  return async (event) => {
-    const response = await next(event)
+export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFrontHandler {
+  return async (event, context) => {
+    const response = await next(event, context)
     return {
       ...response,
       headers: mergeHeaders(
