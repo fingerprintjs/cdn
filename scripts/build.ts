@@ -6,7 +6,6 @@
 import * as path from 'path'
 import { promises as fs } from 'fs'
 import { spawn, SpawnOptions } from 'child_process'
-import * as fsExtra from 'fs-extra'
 
 const projectRootDirectory = path.join(__dirname, '..')
 const distDirectory = path.join(projectRootDirectory, 'dist')
@@ -24,9 +23,9 @@ async function copyNodeModulesForLambda() {
   await Promise.all([
     fs.copyFile(path.join(projectRootDirectory, 'package.json'), path.join(distDirectory, 'package.json')),
     fs.copyFile(path.join(projectRootDirectory, 'yarn.lock'), path.join(distDirectory, 'yarn.lock')),
-
-    // We will use fs.cp when GitHub Actions support Node.js 16
-    fsExtra.copy(path.join(projectRootDirectory, 'node_modules'), path.join(distDirectory, 'node_modules')),
+    fs.cp(path.join(projectRootDirectory, 'node_modules'), path.join(distDirectory, 'node_modules'), {
+      recursive: true,
+    }),
   ])
   // Yarn just removes the excess Node modules
   await runCommand('yarn install', ['--production'], {
@@ -64,7 +63,6 @@ function runCommand(command: string, args: string[] = [], options: SpawnOptions 
 }
 
 build().catch((error) => {
-  // eslint-disable-next-line no-console
   console.error(error)
   process.exitCode = 1
 })
