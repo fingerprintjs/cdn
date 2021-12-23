@@ -77,7 +77,7 @@ Fill in the fields during creation:
 - Viewer protocol policy: `Redirect HTTP to HTTPS`
 - Alternate domain name: the domain name you like; leave empty to use the default CloudFront domain
 - Custom SSL certificate: if you've filled a domain name, create (if not created) and choose an SSL certificate for the domain
-- Description: `CDN for open projects (https://github.com/fingerprintjs/cdn)`
+- Description: `CDN for open projects (GitHub repository: fingerprintjs/cdn)`
 
 Go to [Lambda / Functions](https://console.aws.amazon.com/lambda/home#/functions).
 Create a new function.
@@ -89,13 +89,13 @@ Fill in the fields during creation:
 - Change default execution role (otherwise the function won't run on Lambda@Edge):
     - Execution role: `Create a new role from AWS policy templates`
     - Role name: `opencdn-codegen-role`
-    - Policy templates: `Basic Lambda@Edge permissions (for CloudFront trigge)`
+    - Policy templates: `Basic Lambda@Edge permissions (for CloudFront trigger)`
 
 Change the function settings:
 
 - On the function page scroll down to the "Runtime settings" section, open settings, and change the handler to `src/index.handler`
 - Click the "Configuration" tab, "General configuration", change the memory to 3538 MB, the timeout to 10 seconds, and
-    the description to `CDN for open projects (https://github.com/fingerprintjs/cdn)`.
+    the description to `CDN for open projects (GitHub repository: fingerprintjs/cdn)`.
 
 The more RAM allocated to a lambda, the more CPU power it has. 1769MB = 1vCPU.
 The asset building speed depends on the allocated RAM linearly.
@@ -161,7 +161,7 @@ Create an alarm:
     - Region: `Global`
     - DistributionId: (the distribution id)
 - Statistic: `Average`
-- Period: `1 minute`
+- Period: `5 minutes`
 - Threshold: `Static`, `Greater >`, `0`
 - Additional configuration:
     - Datapoints to alarm: `1` out of `3`
@@ -173,7 +173,7 @@ Create an alarm:
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Click "Next"
 - Alarm name: `opencdn-alarm-5xx`
-- Alarm description: `A 5XX response from the open CDN (https://github.com/fingerprintjs/cdn)`
+- Alarm description: `A 5XX response from the open CDN (GitHub repository: fingerprintjs/cdn)`
 - Click "Next", "Create alarm"
 
 If there is a stale cache for a request in CloudFront, and the lambda fails, CloudFront [will return the cache](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/HTTPStatusCodes.html#HTTPStatusCodes-no-custom-error-pages),
@@ -182,11 +182,11 @@ and the alarm won't trigger. So you need 2 more alarms in order not to miss the 
 1. For unhandled lambda exceptions. Everything is the same except:
     - Metric name: `LambdaExecutionError`
     - Alarm name: `opencdn-alarm-lambdaerror`
-    - Alarm description: `An unexpected error in the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+    - Alarm description: `An unexpected error in the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
 2. For invalid lambda responses. Everything is the same except:
     - Metric name: `LambdaValidationError`
     - Alarm name: `opencdn-alarm-lambdainvalid`
-    - Alarm description: `An invalid response from the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+    - Alarm description: `An invalid response from the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
 
 See [the CloudFrond documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/viewing-cloudfront-metrics.html) to learn what other metrics can be watched.
 
@@ -206,12 +206,14 @@ You can create an alarm for it:
     - Region: `Global`
     - DistributionId: (the distribution id)
 - Statistic: `p90` (the 90th percentile; [possible statistics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html))
-- Period: `6 hours`
+- Period: `4 hours` (Custom — 14400 seconds)
+- Additional configuration:
+    - Datapoints to alarm: `2` out of `2`
 - Threshold: `Static`, `Greater >`, `3000` (milliseconds)
 - Alarm state trigger: `In alarm`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-originlatency`
-- Alarm description: `Too high execution duration of the open CDN lambda (https://github.com/fingerprintjs/cdn)`
+- Alarm description: `Too high execution duration of the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
 
 #### Notifications about too many 4XX error
 
@@ -226,14 +228,14 @@ Create an alarm:
     - DistributionId: (the distribution id)
 - Statistic: `Average`
 - Period: `15 minutes`
-- Threshold: `Static`, `Greater >`, `30`
+- Threshold: `Static`, `Greater >`, `20`
 - Additional configuration:
     - Datapoints to alarm: `2` out of `3`
     - Missing data treatment: `Treat missing data as good (not breaching threshold)`
 - Alarm state trigger: `In alarm`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-4xx`
-- Alarm description: `Too many 4XX responses from the open CDN (https://github.com/fingerprintjs/cdn)`
+- Alarm description: `Too many 4XX responses from the open CDN (GitHub repository: fingerprintjs/cdn)`
 
 #### Notifications about steep changes in number of requests
 
@@ -248,11 +250,16 @@ Create an alarm:
     - DistributionId: (the distribution id)
 - Statistic: `Sum`
 - Period: `30 minutes` (Custom — 1800 seconds)
-- Threshold: `Anomaly detection`, `Outside of the band`, `3`
+- Threshold: `Anomaly detection`, `Outside of the band`, `15`
 - Additional configuration:
     - Datapoints to alarm: `2` out of `3`
     - Missing data treatment: `Treat missing data as bad (breaching threshold)`
 - Alarm state trigger: `In alarm`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-requests`
-- Alarm description: `Unusual number of requests to the open CDN (https://github.com/fingerprintjs/cdn)`
+- Alarm description: `Unusual number of requests to the open CDN (GitHub repository: fingerprintjs/cdn)`
+
+#### Cost monitoring
+
+Add a tag to all AWS resources of the CDN. For example: `cost-category` = `opencdn`.
+You can see how much money the resources with this tag consume in [AWS / Cost Explorer](https://console.aws.amazon.com/cost-management/home#/custom).

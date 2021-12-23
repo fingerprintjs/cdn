@@ -40,7 +40,7 @@ export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(asyn
     return makeNotFoundResponse(`The ${request.uri} path doesn't exist`, true)
   }
 
-  // TypeScript doesn't guards the type if `uriData.version.requestedType === 'inexact'` is used
+  // TypeScript doesn't guard the type if `uriData.version.requestedType === 'inexact'` is used
   const { version } = uriData
   if (version.requestedType === 'inexact') {
     return await handleInexactProjectVersion({ ...uriData, version })
