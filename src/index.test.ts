@@ -2,6 +2,7 @@ import { CloudFrontRequestResult } from 'aws-lambda'
 import * as nock from 'nock'
 import { handler } from './index'
 import * as mocks from './utils/mocks'
+import { getBodyHash } from './utils/http'
 
 /*
  * These tests make no real HTTP requests. The tests with real requests are the "integration" tests.
@@ -21,16 +22,18 @@ afterEach(() => {
 
 it('makes the root page', async () => {
   const response = await callHandler('/')
+  const expectedBody = 'This is a FingerprintJS CDN'
   expect(response).toEqual({
     status: '200',
     headers: {
+      etag: [{ value: `"${getBodyHash(expectedBody)}"` }],
       'cache-control': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
       'x-content-type-options': [{ value: 'nosniff' }],
     },
-    body: 'This is a FingerprintJS CDN',
+    body: expectedBody,
   })
   checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
 })
@@ -42,7 +45,6 @@ it('returns "not found" error', async () => {
     statusDescription: 'Not Found',
     headers: {
       'cache-control': [{ value: expect.anything() }],
-      'last-modified': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
@@ -171,6 +173,7 @@ export function test() {
       body: expect.anything(),
     })
     expect(response?.body).toMatchSnapshot()
+    expect(response?.headers?.etag).toMatchSnapshot()
     checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
@@ -187,6 +190,7 @@ export function test() {
       body: expect.anything(),
     })
     expect(response?.body).toMatchSnapshot()
+    expect(response?.headers?.etag).toMatchSnapshot()
   })
 })
 

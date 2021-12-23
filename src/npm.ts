@@ -63,7 +63,7 @@ const packageDownloads = new Map<string, Promise<string>>()
 
 const gotCommonOptions = {
   retry: 2, // The first try isn't counted as a retry
-  timeout: 5000, // Applies to each tries separately
+  timeout: 5000, // Applies to each try separately
 }
 
 /**
