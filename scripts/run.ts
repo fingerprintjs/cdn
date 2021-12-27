@@ -32,7 +32,7 @@ function parseInput() {
     throw 'The URI argument is missing. Try running the command with `--uri "/fingerprintjs/v3"`.'
   }
   const uri = process.argv[uriArgIndex + 1].split('?', 1)[0] // Query strings aren't supported
-  const fullBody = process.argv.includes('--full-body')
+  const fullBody = process.argv.includes('--full-response-body')
   return { uri, fullBody }
 }
 

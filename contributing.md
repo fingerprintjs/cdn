@@ -16,7 +16,7 @@ Emulate a CloudFront request and see the response produced by the code:
 yarn run-lambda --uri /fingerprintjs/v3
 
 # See the full response body:
-yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-body
+yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-response-body
 ```
 
 Run unit tests:
