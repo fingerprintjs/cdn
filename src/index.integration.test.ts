@@ -71,6 +71,7 @@ describe('exact version', () => {
       body: expect.anything(),
     })
     expect(response?.body).toMatchSnapshot()
+    expect(response?.headers?.etag).toMatchSnapshot()
   })
 
   it('handles missing version', async () => {

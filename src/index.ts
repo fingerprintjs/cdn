@@ -30,7 +30,7 @@ export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(asyn
   if (request.uri === '/') {
     return {
       ...httpUtil.okStatus,
-      headers: httpUtil.makeCacheHeaders(immutableCacheTime),
+      headers: httpUtil.makeCacheControlHeaders(immutableCacheTime),
       body: 'This is a FingerprintJS CDN',
     }
   }
@@ -82,7 +82,7 @@ async function handleExactProjectVersion({
   if (route.type === 'monitoring') {
     return {
       ...httpUtil.okStatus,
-      headers: httpUtil.makeCacheHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
+      headers: httpUtil.makeCacheControlHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
     }
   }
 
@@ -116,7 +116,7 @@ async function handleExactProjectVersion({
   return {
     ...httpUtil.okStatus,
     headers: {
-      ...httpUtil.makeCacheHeaders(immutableCacheTime),
+      ...httpUtil.makeCacheControlHeaders(immutableCacheTime),
       'content-type': [{ value: 'text/javascript; charset=utf-8' }],
     },
     body: code,
@@ -127,7 +127,7 @@ function makeRedirectResponse(uri: string, isPermanent: boolean): CloudFrontResu
   return {
     ...(isPermanent ? httpUtil.permanentRedirectStatus : httpUtil.temporaryRedirectStatus),
     headers: {
-      ...httpUtil.makeCacheHeaders(
+      ...httpUtil.makeCacheControlHeaders(
         isPermanent ? immutableCacheTime : tempRedirectBrowserCacheTime,
         isPermanent ? immutableCacheTime : tempRedirectCdnCacheTime,
       ),
@@ -143,7 +143,7 @@ function makeRedirectResponse(uri: string, isPermanent: boolean): CloudFrontResu
 function makeNotFoundResponse(message: string, isPermanent: boolean): CloudFrontResultResponse {
   return {
     ...httpUtil.notFoundStatus,
-    headers: httpUtil.makeCacheHeaders(
+    headers: httpUtil.makeCacheControlHeaders(
       notFoundBrowserCacheTime,
       isPermanent ? immutableCacheTime : tempNotFoundCdnCacheTime,
     ),

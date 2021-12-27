@@ -5,6 +5,14 @@ exports[`exact version builds minified ESM 1`] = `
 "
 `;
 
+exports[`exact version builds minified ESM 2`] = `
+Array [
+  Object {
+    "value": "\\"dBhlDEIPIeluHpJTNf6LmEsi+1c\\"",
+  },
+]
+`;
+
 exports[`exact version builds unminified UMD with replacements 1`] = `
 "(function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -48,4 +56,12 @@ exports[`exact version builds unminified UMD with replacements 1`] = `
 
 }));
 "
+`;
+
+exports[`exact version builds unminified UMD with replacements 2`] = `
+Array [
+  Object {
+    "value": "\\"MxP2hmISRk7eDrj9+p1x86U+ra4\\"",
+  },
+]
 `;

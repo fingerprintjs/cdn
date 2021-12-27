@@ -1,3 +1,4 @@
+import * as crypto from 'crypto'
 import { CloudFrontHeaders, CloudFrontRequestEvent, CloudFrontResultResponse, Context } from 'aws-lambda'
 
 type Status = Pick<CloudFrontResultResponse, 'status' | 'statusDescription'>
@@ -24,7 +25,7 @@ export const notFoundStatus: Status = {
 }
 
 /**
- * A common HTTP middleware that applies best CDN practices
+ * A common HTTP middleware that applies the best CDN practices
  */
 export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFrontHandler {
   return async (event, context) => {
@@ -37,7 +38,12 @@ export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFront
           'access-control-allow-origin': [{ value: '*' }],
           'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
         },
-        !/^3\d\d$/.test(response.status) && {
+        response.status === '200' &&
+          !!response.body &&
+          !response.headers?.etag?.length && {
+            etag: [{ value: `"${getBodyHash(response.body)}"` }],
+          },
+        (!!response.body || !['201', '204', '301', '302', '303', '307', '308'].includes(response.status)) && {
           'content-type': [{ value: 'text/plain; charset=utf-8' }],
           'x-content-type-options': [{ value: 'nosniff' }],
         },
@@ -49,12 +55,11 @@ export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFront
 /**
  * Note: the times are durations in milliseconds
  */
-export function makeCacheHeaders(
+export function makeCacheControlHeaders(
   browserCacheTime: number,
   cdnCacheDuration = browserCacheTime,
   durationFluctuation = 0.1,
 ): CloudFrontHeaders {
-  // todo: Consider adding ETag
   const headers: CloudFrontHeaders = {}
   const fluctuationMultiplier = 1 - durationFluctuation / 2 + durationFluctuation * Math.random()
 
@@ -64,13 +69,13 @@ export function makeCacheHeaders(
   }
   headers['cache-control'] = [{ value: cacheControl.join(', ') }]
 
-  // When the browser cache life is longer than the CDN cache life, the "If-Modified" check will always return "true",
-  // so the Last-Modified header affects nothing.
-  if (browserCacheTime < cdnCacheDuration) {
-    headers['last-modified'] = [{ value: new Date().toUTCString() }]
-  }
-
   return headers
+}
+
+export function getBodyHash(body: string): string {
+  // SHA1 is the fastest built-in hash. It takes about 1ms to hash 100KB on a 1-core Lambda@Edge.
+  // When the SHA1 algorithm is used, the last symbol is always `=` that can be removed.
+  return crypto.createHash('sha1').update(body).digest('base64').slice(0, -1)
 }
 
 function applyFluctuation(value: number, fluctuation: number): number {
