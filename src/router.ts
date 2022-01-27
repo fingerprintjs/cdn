@@ -25,33 +25,40 @@ export type UriDataInexactVersion = UriData & { version: InexactVersion }
  * The URI is expected to always start with a slash.
  */
 export function parseRequestUri(uri: string): UriData | undefined {
-  const uriMatch = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
-  if (!uriMatch) {
-    return undefined
-  }
+  try {
+    const uriMatch = /^\/([^/]*)\/v([^/]*)(?:\/(.+))?$/.exec(uri)
+    if (!uriMatch) {
+      return undefined
+    }
 
-  const projectKey = decodeURIComponent(uriMatch[1])
-  if (!Object.prototype.hasOwnProperty.call(projects, projectKey)) {
-    return undefined
-  }
-  const project = projects[projectKey]
+    const projectKey = decodeURIComponent(uriMatch[1])
+    if (!Object.prototype.hasOwnProperty.call(projects, projectKey)) {
+      return undefined
+    }
+    const project = projects[projectKey]
 
-  const rawVersion = decodeURIComponent(uriMatch[2])
-  const version = findAppropriateVersion(project.versions, rawVersion)
-  if (!version) {
-    return undefined
-  }
+    const rawVersion = decodeURIComponent(uriMatch[2])
+    const version = findAppropriateVersion(project.versions, rawVersion)
+    if (!version) {
+      return undefined
+    }
 
-  const routePath = (uriMatch[3] || '').split('/').map(decodeURIComponent).join('/')
-  if (!Object.prototype.hasOwnProperty.call(version.routes, routePath)) {
-    return undefined
-  }
-  const route = version.routes[routePath]
+    const routePath = (uriMatch[3] || '').split('/').map(decodeURIComponent).join('/')
+    if (!Object.prototype.hasOwnProperty.call(version.routes, routePath)) {
+      return undefined
+    }
+    const route = version.routes[routePath]
 
-  return {
-    project: { ...project, key: projectKey },
-    version,
-    route: { ...route, path: routePath },
+    return {
+      project: { ...project, key: projectKey },
+      version,
+      route: { ...route, path: routePath },
+    }
+  } catch (error) {
+    if (isUrlDecodeError(error)) {
+      return undefined
+    }
+    throw error
   }
 }
 
@@ -99,4 +106,11 @@ function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: s
 
 function isInexactVersion(rawVersion: string) {
   return /^(0|[1-9]\d*)(\.(0|[1-9]\d*))?$/.test(rawVersion)
+}
+
+/**
+ * Detects whether the error is thrown by decodeURIComponent in response to an improper URI
+ */
+function isUrlDecodeError(error: unknown): error is URIError {
+  return error instanceof URIError
 }

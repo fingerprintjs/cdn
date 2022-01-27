@@ -75,6 +75,15 @@ describe('parseRequestUri', () => {
       route: { ...projects.botd.versions[0].routes['esm.js'], path: 'esm.js' },
     })
   })
+
+  it('parsers route with a part that decodeURIComponent fails to decode', () => {
+    // These are real requests that we received on 2022.01.27
+    expect(parseRequestUri('/0bi1rp45wm%c1%81ikbn00syy3/v3.3.1/npm-monitoring')).toBeUndefined()
+    expect(parseRequestUri('/fingerprintjs401m7yi8od%c1%817mybi4uukw/v3.3.1/npm-monitoring')).toBeUndefined()
+    expect(parseRequestUri('/fingerprintjs/v3.3.12qh7f12ska%c1%81ydglli97j6/npm-monitoring')).toBeUndefined()
+    expect(parseRequestUri('/fingerprintjs/v3.3.1/hpjg81txse%c1%814uo0dv4i4j')).toBeUndefined()
+    expect(parseRequestUri('/fingerprintjs/v3.3.1/npm-monitoringlx96v2gx81%c1%81a1ee874u1j')).toBeUndefined()
+  })
 })
 
 describe('makeRequestUri', () => {
