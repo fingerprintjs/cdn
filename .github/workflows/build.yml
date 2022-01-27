@@ -16,8 +16,10 @@ jobs:
       - name: Cache
         uses: actions/cache@v2
         with:
-          path: node_modules
-          key: nodemodules-${{ hashFiles('yarn.lock') }}
+          path: |
+            **/node_modules
+            !**/dist/node_modules
+          key: nodemodules-${{ hashFiles('**/yarn.lock') }}
           restore-keys: nodemodules-
       - name: Install Node packages
         run: yarn install
@@ -32,7 +34,7 @@ jobs:
       - name: Make an archive for AWS Lambda and save it as an artifact
         uses: actions/upload-artifact@v2
         with:
-          name: Upload me to Lambda
+          name: Open CDN (upload me to Lambda)
           path: dist/*
           if-no-files-found: error
       - name: How to deploy
