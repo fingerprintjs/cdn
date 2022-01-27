@@ -79,7 +79,7 @@ Fill in the fields during creation:
 - Custom SSL certificate: if you've filled a domain name, create (if not created) and choose an SSL certificate for the domain
 - Description: `CDN for open projects (GitHub repository: fingerprintjs/cdn)`
 
-Go to [Lambda / Functions](https://console.aws.amazon.com/lambda/home#/functions).
+Go to [Lambda / Functions](https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions), the US East (N. Virginia) region.
 Create a new function.
 Fill in the fields during creation:
 
@@ -162,9 +162,9 @@ Create an alarm:
     - DistributionId: (the distribution id)
 - Statistic: `Average`
 - Period: `5 minutes`
-- Threshold: `Static`, `Greater >`, `0`
+- Threshold: `Static`, `Greater >`, `1`
 - Additional configuration:
-    - Datapoints to alarm: `1` out of `3`
+    - Datapoints to alarm: `2` out of `3`
         (the alarm should check for errors at least 3 recent minutes of the metric,
         because metric data can arrive retroactively, i.e. be written to a past metric history after a delay)
     - Missing data treatment: `Treat missing data as good (not breaching threshold)`
@@ -250,7 +250,7 @@ Create an alarm:
     - DistributionId: (the distribution id)
 - Statistic: `Sum`
 - Period: `30 minutes` (Custom — 1800 seconds)
-- Threshold: `Anomaly detection`, `Outside of the band`, `15`
+- Threshold: `Anomaly detection`, `Outside of the band`, `5`
 - Additional configuration:
     - Datapoints to alarm: `2` out of `3`
     - Missing data treatment: `Treat missing data as bad (breaching threshold)`
