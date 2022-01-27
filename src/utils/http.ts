@@ -30,25 +30,21 @@ export const notFoundStatus: Status = {
 export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFrontHandler {
   return async (event, context) => {
     const response = await next(event, context)
-    return {
-      ...response,
-      headers: mergeHeaders(
-        response.headers,
-        {
-          'access-control-allow-origin': [{ value: '*' }],
-          'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
-        },
-        response.status === '200' &&
-          !!response.body &&
-          !response.headers?.etag?.length && {
-            etag: [{ value: `"${getBodyHash(response.body)}"` }],
-          },
-        (!!response.body || !['201', '204', '301', '302', '303', '307', '308'].includes(response.status)) && {
-          'content-type': [{ value: 'text/plain; charset=utf-8' }],
-          'x-content-type-options': [{ value: 'nosniff' }],
-        },
-      ),
+    const headers = addMissingHeaders(
+      response.headers,
+      {
+        'access-control-allow-origin': [{ value: '*' }],
+        'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
+      },
+      (!!response.body || !['201', '204', '301', '302', '303', '307', '308'].includes(response.status)) && {
+        'content-type': [{ value: 'text/plain; charset=utf-8' }],
+        'x-content-type-options': [{ value: 'nosniff' }],
+      },
+    )
+    if (response.status === '200' && response.body && !headers.etag?.length) {
+      headers.etag = [{ value: `"${getBodyHash(response.body)}"` }]
     }
+    return { ...response, headers }
   }
 }
 
@@ -85,7 +81,7 @@ function applyFluctuation(value: number, fluctuation: number): number {
 /**
  * Note: in contrast to Object.assign and object spread, the early headers have a higher priority
  */
-function mergeHeaders(...headerSets: (CloudFrontHeaders | false | null | undefined)[]): CloudFrontHeaders {
+function addMissingHeaders(...headerSets: (CloudFrontHeaders | false | null | undefined)[]): CloudFrontHeaders {
   const result = { ...headerSets[0] }
   for (let i = 1; i < headerSets.length; ++i) {
     const headers = headerSets[i]
