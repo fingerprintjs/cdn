@@ -108,6 +108,7 @@ export const projects: Record<string, Project> = {
     ],
   },
 
+  // https://github.com/fingerprintjs/fingerprintjs-pro-gtm
   'fingerprintjs-pro-gtm': {
     versions: [
       {
@@ -117,10 +118,8 @@ export const projects: Record<string, Project> = {
           '': { type: 'redirect', target: 'esm.min.js' },
           'iife.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife' },
           'iife.min.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife', minified: true },
-          'esm.js': { ...fingerprintJsProGtmRouteCommon, format: 'esm' },
-          'esm.min.js': { ...fingerprintJsProGtmRouteCommon, format: 'esm', minified: true },
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
 }
