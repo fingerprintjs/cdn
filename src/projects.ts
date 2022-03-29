@@ -113,9 +113,8 @@ export const projects: Record<string, Project> = {
     versions: [
       {
         npmPackage: '@fingerprintjs/fingerprintjs-pro-gtm',
-        versionRange: { start: '0.2.0' },
+        versionRange: { start: '0.3.0' },
         routes: {
-          '': { type: 'redirect', target: 'esm.min.js' },
           'iife.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife' },
           'iife.min.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife', minified: true },
         },
