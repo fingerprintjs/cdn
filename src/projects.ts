@@ -62,6 +62,8 @@ const fingerprintJsRouteCommon = {
 
 const botdRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
 
+const fingerprintJsProGtmRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintjsProGTM' } as const
+
 /**
  * The keys are the first part of the incoming URL. The keys mayn't include slashes.
  */
@@ -101,6 +103,20 @@ export const projects: Record<string, Project> = {
           'esm.min.js': { ...botdRouteCommon, format: 'esm', minified: true },
           'umd.js': { ...botdRouteCommon, format: 'umd' },
           'umd.min.js': { ...botdRouteCommon, format: 'umd', minified: true },
+        },
+      },
+    ],
+  },
+
+  // https://github.com/fingerprintjs/fingerprintjs-pro-gtm
+  'fingerprintjs-pro-gtm': {
+    versions: [
+      {
+        npmPackage: '@fingerprintjs/fingerprintjs-pro-gtm',
+        versionRange: { start: '0.3.0' },
+        routes: {
+          'iife.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife' },
+          'iife.min.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife', minified: true },
         },
       },
     ],
