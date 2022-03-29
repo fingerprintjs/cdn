@@ -41,7 +41,6 @@ There are limitations for the libraries served by the CDN.
 Some of these limitations can be removed with changes to the CDN code.
 
 - Only versions published to NPM are served.
-- Only the NPM package "main" JS file is served.
 - The library version names must follow the SemVer standard. See the standard:
   [a formal description](https://semver.org/#backusnaur-form-grammar-for-valid-semver-versions) or
   [a regular expression](https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string).
@@ -50,6 +49,7 @@ Some of these limitations can be removed with changes to the CDN code.
 - The browser bundles mustn't exceed 1MB because CloudFront limits the size of the responses produced by lambdas.
 - The NPM package and its external dependencies must have an ES entrypoint (CommonJS isn't supported).
   The entrypoint must be specified by the `module` or the `jsnext:main` field of the `package.json` file.
+  No other file from the package can be served.
 - The package's entrypoint code must be a UTF-8 text.
 - Ideally, the NPM package should include only the distributive code in ESM and CJS formats only.
   It will make downloading the code faster.
