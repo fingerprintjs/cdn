@@ -141,8 +141,8 @@ select the distribution, click "View distribution metrics", open the "Lambda@Edg
 
 There 2 types of errors:
 
-1. An unhandled exception during the lambda execution
-2. An invalid lambda response
+1. An uncaught exception during the lambda execution
+2. An invalid lambda response format
 
 To see the error details, go to [AWS / CloudWatch / Log groups](https://console.aws.amazon.com/cloudwatch/home#logsV2:log-groups).
 Choose a region (the lambda writes the logs to the same region where it runs).
@@ -161,32 +161,41 @@ Create an alarm:
     - Region: `Global`
     - DistributionId: (the distribution id)
 - Statistic: `Average`
-- Period: `5 minutes`
+- Period: `1 hour`
 - Threshold: `Static`, `Greater >`, `1`
 - Additional configuration:
-    - Datapoints to alarm: `2` out of `3`
-        (the alarm should check for errors at least 3 recent minutes of the metric,
-        because metric data can arrive retroactively, i.e. be written to a past metric history after a delay)
+    - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as good (not breaching threshold)`
 - Click "Next"
-- Alarm state trigger: `In alarm`
+- Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Click "Next"
 - Alarm name: `opencdn-alarm-5xx`
-- Alarm description: `A 5XX response from the open CDN (GitHub repository: fingerprintjs/cdn)`
+- Alarm description: `Too many 5XX responses from the Open CDN (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
 - Click "Next", "Create alarm"
 
-If there is a stale cache for a request in CloudFront, and the lambda fails, CloudFront [will return the cache](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/HTTPStatusCodes.html#HTTPStatusCodes-no-custom-error-pages),
-and the alarm won't trigger. So you need 2 more alarms in order not to miss the lambda fails:
+This alarm will trigger when the number of CloudFront distribution responses with 5XX HTTP code is too high.
+CloudFront doesn't provide information about the exact reasons. The reasons can be lambda errors (see above), internal AWS errors or an incorrect configuration.
 
-1. For unhandled lambda exceptions. Everything is the same except:
+Lambda errors not necessary lead to 5XX responses (for example, when CloudFront has [a cache](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/HTTPStatusCodes.html#HTTPStatusCodes-no-custom-error-pages) for the request).
+So you need more alarms not to miss the lambda fails:
+
+1. For uncaught lambda exceptions (tip: alarm can be copied):
     - Metric name: `LambdaExecutionError`
+    - Period: `1 hour`
+    - Threshold: `Static`, `Greater >`, `4`
+    - Datapoints to alarm: `1` out of `1`
     - Alarm name: `opencdn-alarm-lambdaerror`
-    - Alarm description: `An unexpected error in the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
-2. For invalid lambda responses. Everything is the same except:
+    - Alarm description: `Too many uncaught exceptions in the Open CDN lambda (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
+    - The rest is the same
+2. For invalid lambda responses:
     - Metric name: `LambdaValidationError`
+    - Period: `1 hour`
+    - Threshold: `Static`, `Greater >`, `0`
+    - Datapoints to alarm: `1` out of `1`
     - Alarm name: `opencdn-alarm-lambdainvalid`
-    - Alarm description: `An invalid response from the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
+    - Alarm description: `A response with an invalid format was returned from the Open CDN lambda (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
+    - The rest is the same
 
 See [the CloudFrond documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/viewing-cloudfront-metrics.html) to learn what other metrics can be watched.
 
@@ -208,12 +217,13 @@ You can create an alarm for it:
 - Statistic: `p90` (the 90th percentile; [possible statistics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html))
 - Period: `4 hours` (Custom — 14400 seconds)
 - Additional configuration:
-    - Datapoints to alarm: `2` out of `2`
+    - Datapoints to alarm: `1` out of `1`
+    - Missing data treatment: `Treat missing data as ignore (maintain the alarm state)`
 - Threshold: `Static`, `Greater >`, `3000` (milliseconds)
-- Alarm state trigger: `In alarm`
+- Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-originlatency`
-- Alarm description: `Too high execution duration of the open CDN lambda (GitHub repository: fingerprintjs/cdn)`
+- Alarm description: `Too high execution duration of the Open CDN lambda (GitHub repository: fingerprintjs/cdn)`
 
 #### Notifications about too many 4XX error
 
@@ -227,15 +237,15 @@ Create an alarm:
     - Region: `Global`
     - DistributionId: (the distribution id)
 - Statistic: `Average`
-- Period: `15 minutes`
+- Period: `1 hour`
 - Threshold: `Static`, `Greater >`, `20`
 - Additional configuration:
-    - Datapoints to alarm: `2` out of `3`
+    - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as good (not breaching threshold)`
-- Alarm state trigger: `In alarm`
+- Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-4xx`
-- Alarm description: `Too many 4XX responses from the open CDN (GitHub repository: fingerprintjs/cdn)`
+- Alarm description: `Too many 4XX responses from the Open CDN (GitHub repository: fingerprintjs/cdn)`
 
 #### Notifications about steep changes in number of requests
 
@@ -249,17 +259,59 @@ Create an alarm:
     - Region: `Global`
     - DistributionId: (the distribution id)
 - Statistic: `Sum`
-- Period: `30 minutes` (Custom — 1800 seconds)
-- Threshold: `Anomaly detection`, `Outside of the band`, `5`
+- Period: `1 hour`
+- Threshold: `Anomaly detection`, `Outside of the band`, `15`
 - Additional configuration:
-    - Datapoints to alarm: `2` out of `3`
+    - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as bad (breaching threshold)`
-- Alarm state trigger: `In alarm`
+- Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-requests`
-- Alarm description: `Unusual number of requests to the open CDN (GitHub repository: fingerprintjs/cdn)`
+- Alarm description: `Unusual number of requests to the Open CDN (GitHub repository: fingerprintjs/cdn)`
 
 #### Cost monitoring
 
 Add a tag to all AWS resources of the CDN. For example: `cost-category` = `opencdn`.
-You can see how much money the resources with this tag consume in [AWS / Cost Explorer](https://console.aws.amazon.com/cost-management/home#/custom).
+
+After adding a tag to a resource, go to [AWS / Billing / Cost allocation tags](https://console.aws.amazon.com/billing/home?#/tags) and activate the tag.
+
+After several days you'll be able to see how much money the resources with this tag consume in [AWS / Cost Explorer](https://console.aws.amazon.com/cost-management/home#/custom).
+
+### Statistics
+
+This section describes how to collect the logs about each incoming request.
+
+Go to [AWS / S3 / Buckets](https://s3.console.aws.amazon.com/s3/buckets).
+Create a new bucket where you will store the logs:
+
+- Bucket name: `opencdn-logs`
+- AWS Region: `us-east-1`
+- Object Ownership: `ACLs enabled` / `Bucket owner preferred`
+- Block all public access: yes
+
+Open the created bucket.
+Switch to the "Permissions" tab, scroll down to the "Access control list" section, click "Edit".
+Add a grantee:
+
+- Grantee: `c4c1ede66af53448b93c283ce9448c4ba468c9432aa01d700d3878632f77d2d0` (more details [here](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html?icmpid=docs_cf_help_panel#AccessLogsBucketAndFileOwnership))
+- All the checkboxes: yes
+
+Switch to the "Permissions" tab.
+Create a lifecycle rule:
+
+- Lifecycle rule name: `cleanup` (or whatever you want)
+- Prefix: `cloudfront/`
+- Lifecycle rule actions: choose:
+    - `Expire current versions of objects`
+    - `Permanently delete noncurrent versions of objects`
+- Expire current versions of objects / Days after object creation: `30` (the number of days you want to keep the logs for)
+- Permanently delete noncurrent versions of objects / Days after objects become noncurrent: `1`
+
+Go to [AWS / CloudFront / Logs](https://us-east-1.console.aws.amazon.com/cloudfront/v3/home#/logs).
+Choose the distribution created earlier.
+Edit the standard logs settings:
+
+- S3 bucket: `opencdn-logs` (the bucket you've created earlier)
+- S3 bucket prefix: `cloudfront/standard/`
+- Cookie logging: no
+- Status: yes
