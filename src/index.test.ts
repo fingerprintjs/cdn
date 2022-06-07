@@ -29,6 +29,7 @@ it('makes the root page', async () => {
       etag: [{ value: `"${getBodyHash(expectedBody)}"` }],
       'cache-control': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
+      'cross-origin-resource-policy': [{ value: 'cross-origin' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
       'x-content-type-options': [{ value: 'nosniff' }],
@@ -46,6 +47,7 @@ it('returns "not found" error', async () => {
     headers: {
       'cache-control': [{ value: expect.anything() }],
       'access-control-allow-origin': [{ value: '*' }],
+      'cross-origin-resource-policy': [{ value: 'cross-origin' }],
       'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       'content-type': [{ value: 'text/plain; charset=utf-8' }],
       'x-content-type-options': [{ value: 'nosniff' }],
