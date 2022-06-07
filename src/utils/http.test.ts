@@ -9,6 +9,7 @@ describe('withBestPractices', () => {
       status: '200',
       headers: {
         'access-control-allow-origin': [{ value: '*' }],
+        'cross-origin-resource-policy': [{ value: 'cross-origin' }],
         'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
         'content-type': [{ value: 'text/plain; charset=utf-8' }],
         'x-content-type-options': [{ value: 'nosniff' }],
@@ -32,6 +33,7 @@ describe('withBestPractices', () => {
       status: '200',
       headers: {
         'access-control-allow-origin': [{ value: '*' }],
+        'cross-origin-resource-policy': [{ value: 'cross-origin' }],
         'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
         'content-type': [{ value: 'text/javascript' }],
         'x-content-type-options': [{ value: 'nosniff' }],
@@ -52,6 +54,7 @@ describe('withBestPractices', () => {
       headers: {
         location: [{ value: '/foo/bar' }],
         'access-control-allow-origin': [{ value: '*' }],
+        'cross-origin-resource-policy': [{ value: 'cross-origin' }],
         'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       },
     })

@@ -34,6 +34,7 @@ export function withBestPractices(next: AsyncCloudFrontHandler): AsyncCloudFront
       response.headers,
       {
         'access-control-allow-origin': [{ value: '*' }],
+        'cross-origin-resource-policy': [{ value: 'cross-origin' }],
         'strict-transport-security': [{ value: 'max-age=63072000; includeSubDomains; preload' }],
       },
       (!!response.body || !['201', '204', '301', '302', '303', '307', '308'].includes(response.status)) && {
