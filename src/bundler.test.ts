@@ -7,7 +7,7 @@ import buildBundle, { getCodeBanner, getPackageModulePath, withSandbox } from '.
 describe('buildBundle', () => {
   it('builds unminified ESM, preserves banner and replaces', async () => {
     const packageFiles = {
-      'package.json': '{"module": "index.js"}',
+      'package.json': '{"fp:cdn:esm": "index.js"}',
       'index.js': `/* Copyright John Doe 2021 */
 import {__assign} from 'tslib'
 export function test() {
@@ -138,18 +138,30 @@ describe('withSandbox', () => {
 })
 
 describe('getPackageModulePath', () => {
-  it('prefers "module"', async () => {
+  it('prefers "fp:cdn:esm"', async () => {
     const packageFiles = {
-      'package.json': '{"module": "foo.js", "jsnext:main": "bar.js"}',
+      'package.json': '{"fp:cdn:esm": "foo.js", "module": "bar.js", "jsnext:main": "baz.js"}',
       'foo.js': 'console.log("Hello")',
       'bar.js': 'console.log("Hello")',
+      'baz.js': 'console.log("Hello")',
     }
     await withTemporaryFiles(packageFiles, async (packageDirectory) => {
       await expect(getPackageModulePath(packageDirectory)).resolves.toBe(path.join(packageDirectory, 'foo.js'))
     })
   })
 
-  it('uses "jsnext:main" if there is no "module" field', async () => {
+  it('uses "module" if there is no "fp:cdn:esm" field', async () => {
+    const packageFiles = {
+      'package.json': '{"jsnext:main": "foo.js", "module": "bar.js"}',
+      'foo.js': 'console.log("Hello")',
+      'bar.js': 'console.log("Hello")',
+    }
+    await withTemporaryFiles(packageFiles, async (packageDirectory) => {
+      await expect(getPackageModulePath(packageDirectory)).resolves.toBe(path.join(packageDirectory, 'bar.js'))
+    })
+  })
+
+  it('uses "jsnext:main" if there is no "fp:cdn:esm" and "module" fields', async () => {
     const packageFiles = {
       'package.json': '{"jsnext:main": "bar.js"}',
       'bar.js': 'console.log("Hello")',
@@ -159,9 +171,9 @@ describe('getPackageModulePath', () => {
     })
   })
 
-  it('uses "jsnext:main" if there is no "module" file', async () => {
+  it('uses "module" if there is no "fp:cdn:esm" file', async () => {
     const packageFiles = {
-      'package.json': '{"module": "foo.js", "jsnext:main": "bar.js"}',
+      'package.json': '{"fp:cdn:esm": "foo.js", "module": "bar.js"}',
       'bar.js': 'console.log("Hello")',
     }
     await withTemporaryFiles(packageFiles, async (packageDirectory) => {
@@ -169,9 +181,9 @@ describe('getPackageModulePath', () => {
     })
   })
 
-  it('throws "jsnext:main" if there is no entrypoint', async () => {
+  it('throws if there is no entrypoint', async () => {
     const packageFiles = {
-      'package.json': '{"module": "foo.js", "jsnext:main": "foo.js"}',
+      'package.json': '{"fp:cdn:esm": "foo.js", "module": "foo.js", "jsnext:main": "foo.js"}',
       'foo.js/foo.js': 'console.log("Hello")',
     }
     await withTemporaryFiles(packageFiles, async (packageDirectory) => {

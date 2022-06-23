@@ -29,4 +29,4 @@ You can find example URLs on the pages of the projects.
 
 ## Contributing
 
-See the [contributing guidelines](contributing.md) to learn how to run and deploy the code and how to add new a project.
+See the [contributing guidelines](contributing.md) to learn how to run and deploy the code and how to add a new project.

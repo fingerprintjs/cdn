@@ -48,7 +48,7 @@ Some of these limitations can be removed with changes to the CDN code.
 - The only allowed external dependency (listed in the `dependencies` field of `package.json`) is `tslib` version 2.
 - The browser bundles mustn't exceed 1MB because CloudFront limits the size of the responses produced by lambdas.
 - The NPM package and its external dependencies must have an ES entrypoint (CommonJS isn't supported).
-  The entrypoint must be specified by the `module` or the `jsnext:main` field of the `package.json` file.
+  The entrypoint must be specified by an `fp:cdn:esm`, `module` or `jsnext:main` field of the `package.json` file.
   No other file from the package can be served.
 - The package's entrypoint code must be a UTF-8 text.
 - Ideally, the NPM package should include only the distributive code in ESM and CJS formats only.

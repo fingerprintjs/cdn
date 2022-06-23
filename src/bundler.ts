@@ -83,7 +83,7 @@ export async function getPackageModulePath(packageDirectory: string): Promise<st
   const packageJsonContent = await fs.readFile(path.join(packageDirectory, 'package.json'), 'utf8')
   const packageDescription = JSON.parse(packageJsonContent)
 
-  for (const prop of ['module', 'jsnext:main']) {
+  for (const prop of ['fp:cdn:esm', 'module', 'jsnext:main']) {
     if (typeof packageDescription[prop] !== 'string') {
       continue
     }
