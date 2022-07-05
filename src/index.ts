@@ -31,7 +31,7 @@ export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(asyn
     return {
       ...httpUtil.okStatus,
       headers: httpUtil.makeCacheControlHeaders(immutableCacheTime),
-      body: 'This is a FingerprintJS CDN',
+      body: 'This is a Fingerprint CDN',
     }
   }
 

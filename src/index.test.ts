@@ -22,7 +22,7 @@ afterEach(() => {
 
 it('makes the root page', async () => {
   const response = await callHandler('/')
-  const expectedBody = 'This is a FingerprintJS CDN'
+  const expectedBody = 'This is a Fingerprint CDN'
   expect(response).toEqual({
     status: '200',
     headers: {
