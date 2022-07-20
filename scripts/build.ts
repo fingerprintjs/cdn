@@ -6,6 +6,7 @@
 import * as path from 'path'
 import { promises as fs } from 'fs'
 import { spawn, SpawnOptions } from 'child_process'
+import { removeFilesNotMatchingRecursively } from '../src/utils/filesystem'
 
 const projectRootDirectory = path.join(__dirname, '..')
 const distDirectory = path.join(projectRootDirectory, 'dist')
@@ -32,7 +33,11 @@ async function copyNodeModulesForLambda() {
     cwd: distDirectory,
     shell: true,
   })
-  await Promise.all([fs.rm(path.join(distDirectory, 'package.json')), fs.rm(path.join(distDirectory, 'yarn.lock'))])
+  await Promise.all([
+    fs.rm(path.join(distDirectory, 'package.json')),
+    fs.rm(path.join(distDirectory, 'yarn.lock')),
+    removeFilesNotMatchingRecursively(path.join(distDirectory, 'node_modules'), /\.(js|json)$/i),
+  ])
 }
 
 async function build() {
