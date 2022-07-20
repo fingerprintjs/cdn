@@ -71,3 +71,38 @@ export async function isDirectory(path: string): Promise<boolean> {
     throw error
   }
 }
+
+/**
+ * Returns `true` if the whole directory was emptied and removed
+ */
+export async function removeFilesNotMatchingRecursively(directory: string, fileNameAllowFilter: RegExp) {
+  const items = await fs.readdir(directory, { withFileTypes: true })
+  let isSomethingLeft = false
+
+  await Promise.all(
+    items.map(async (item) => {
+      const itemPath = path.join(directory, item.name)
+      if (item.isDirectory()) {
+        const isDirectoryDeleted = await removeFilesNotMatchingRecursively(itemPath, fileNameAllowFilter)
+        if (!isDirectoryDeleted) {
+          isSomethingLeft = true
+        }
+      } else if (item.isFile()) {
+        if (fileNameAllowFilter.test(itemPath)) {
+          isSomethingLeft = true
+        } else {
+          await fs.rm(itemPath)
+        }
+      } else {
+        isSomethingLeft = true
+      }
+    }),
+  )
+
+  if (!isSomethingLeft) {
+    await fs.rmdir(directory)
+    return true
+  }
+
+  return false
+}
