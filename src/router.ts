@@ -1,24 +1,22 @@
-import { Project, ProjectRoute, projects, ProjectVersion } from './projects'
+import { ProjectRoute, ProjectRouteAlias, projects, ProjectVersion } from './projects'
 import * as versionUtil from './utils/version'
 
-interface ExactVersion extends ProjectVersion {
+export interface ExactVersion extends ProjectVersion {
   requestedType: 'exact'
   requestedVersion: string
 }
 
-interface InexactVersion extends ProjectVersion {
+export interface InexactVersion extends ProjectVersion {
   requestedType: 'inexact'
   requestedRange: versionUtil.VersionRange
 }
 
-export interface UriData {
-  project: Project & { key: string }
-  version: ExactVersion | InexactVersion
-  route: ProjectRoute & { path: string }
-}
+export type ProjectNoAliasRoute = Exclude<ProjectRoute, ProjectRouteAlias>
 
-export type UriDataExactVersion = UriData & { version: ExactVersion }
-export type UriDataInexactVersion = UriData & { version: InexactVersion }
+export interface UriData {
+  version: ExactVersion | InexactVersion
+  route: ProjectNoAliasRoute
+}
 
 /**
  * Parses a URI of an incoming request.
@@ -47,27 +45,16 @@ export function parseRequestUri(uri: string): UriData | undefined {
     if (!Object.prototype.hasOwnProperty.call(version.routes, routePath)) {
       return undefined
     }
-    const route = version.routes[routePath]
+    let route = version.routes[routePath]
+    route = resolveAlias(version, route)
 
-    return {
-      project: { ...project, key: projectKey },
-      version,
-      route: { ...route, path: routePath },
-    }
+    return { version, route }
   } catch (error) {
     if (isUrlDecodeError(error)) {
       return undefined
     }
     throw error
   }
-}
-
-/**
- * Builds the URI of an incoming request (e.g. for redirect).
- * The returned URI starts with a slash.
- */
-export function makeRequestUri(projectKey: string, version: string, routePath: string): string {
-  return ['', projectKey, `v${version}`, ...(routePath ? routePath.split('/') : [])].map(encodeURIComponent).join('/')
 }
 
 function findAppropriateVersion(projectVersions: ProjectVersion[], rawVersion: string): UriData['version'] | undefined {
@@ -113,4 +100,24 @@ function isInexactVersion(rawVersion: string) {
  */
 function isUrlDecodeError(error: unknown): error is URIError {
   return error instanceof URIError
+}
+
+function resolveAlias(version: ProjectVersion, route: ProjectRoute): ProjectNoAliasRoute {
+  let currentRoute = route
+
+  for (;;) {
+    if (currentRoute.type !== 'alias') {
+      return currentRoute
+    }
+
+    const { target } = currentRoute
+    currentRoute = version.routes[target]
+
+    if (!currentRoute) {
+      throw new Error(`Configuration error: an alias points to a non-existent route ${JSON.stringify(target)}`)
+    }
+    if (currentRoute === route) {
+      throw new Error(`Configuration error: an alias cycle is detected at ${JSON.stringify(target)}`)
+    }
+  }
 }

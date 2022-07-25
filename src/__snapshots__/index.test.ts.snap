@@ -1,23 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`exact version builds minified ESM 1`] = `
-"var n=function(){return n=Object.assign||function(n){for(var r,t=1,o=arguments.length;t<o;t++)for(var e in r=arguments[t])Object.prototype.hasOwnProperty.call(r,e)&&(n[e]=r[e]);return n},n.apply(this,arguments)};function r(){return window.__fpjs_d_m||console.log(\\"Test\\"),n({},{})}export{r as test};
+exports[`exact version follows alias and builds minified ESM with replacements 1`] = `
+"var r=function(){return r=Object.assign||function(r){for(var t,n=1,e=arguments.length;n<e;n++)for(var o in t=arguments[n])Object.prototype.hasOwnProperty.call(t,o)&&(r[o]=t[o]);return r},r.apply(this,arguments)};function t(){return r({},{})}export{t as test};
 "
 `;
 
-exports[`exact version builds minified ESM 2`] = `
+exports[`exact version follows alias and builds minified ESM with replacements 2`] = `
 Array [
   Object {
-    "value": "\\"dBhlDEIPIeluHpJTNf6LmEsi+1c\\"",
+    "value": "\\"BroUu1mLLUQXYPyYERJCMKNjRzw\\"",
   },
 ]
 `;
 
-exports[`exact version builds unminified UMD with replacements 1`] = `
+exports[`inexact version builds unminified UMD of the latest suitable version 1`] = `
 "(function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.FingerprintJS = {}));
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Botd = {}));
 })(this, (function (exports) { 'use strict';
 
     /*! *****************************************************************************
@@ -47,6 +47,9 @@ exports[`exact version builds unminified UMD with replacements 1`] = `
     };
 
     function test() {
+      if (!window.__fpjs_d_m) {
+        console.log('Test'); // Shall be removed
+      }
       return __assign({}, {})
     }
 
@@ -58,10 +61,10 @@ exports[`exact version builds unminified UMD with replacements 1`] = `
 "
 `;
 
-exports[`exact version builds unminified UMD with replacements 2`] = `
+exports[`inexact version builds unminified UMD of the latest suitable version 2`] = `
 Array [
   Object {
-    "value": "\\"MxP2hmISRk7eDrj9+p1x86U+ra4\\"",
+    "value": "\\"88Yh46kykjBvMkauPSMy5TT7YGI\\"",
   },
 ]
 `;
