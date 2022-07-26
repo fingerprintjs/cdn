@@ -48,7 +48,7 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
 
     function test() {
       if (!window.__fpjs_d_m) {
-        console.log('Test'); // Shall be removed
+        console.log('Test'); // This part shall be removed in result of the \\"fingerprintjs\\" project replacements
       }
       return __assign({}, {})
     }
@@ -64,7 +64,7 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
 exports[`inexact version builds unminified UMD of the latest suitable version 2`] = `
 Array [
   Object {
-    "value": "\\"88Yh46kykjBvMkauPSMy5TT7YGI\\"",
+    "value": "\\"C884OmEvK0gb3cE99MAQ+/OrCcw\\"",
   },
 ]
 `;

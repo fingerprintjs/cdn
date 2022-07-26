@@ -13,7 +13,7 @@ const packageFiles = {
   'index.js': `import {__assign} from 'tslib'
 export function test() {
   if (!window.__fpjs_d_m) {
-    console.log('Test') // Shall be removed
+    console.log('Test') // This part shall be removed in result of the "fingerprintjs" project replacements
   }
   return __assign({}, {})
 }`,
