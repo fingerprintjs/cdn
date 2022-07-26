@@ -1,7 +1,8 @@
 import { CloudFrontRequestEvent, CloudFrontRequestHandler, CloudFrontResultResponse } from 'aws-lambda'
 import * as httpUtil from './utils/http'
-import { makeRequestUri, parseRequestUri, UriDataExactVersion, UriDataInexactVersion } from './router'
+import { ExactVersion, InexactVersion, parseRequestUri } from './router'
 import { downloadPackage, ErrorName as NpmError, getPackageGreatestVersion } from './npm'
+import { ProjectPackageMainBundle } from './projects'
 import { intersectVersionRanges } from './utils/version'
 
 const oneMinute = 60 * 1000
@@ -10,13 +11,13 @@ const oneDay = oneHour * 24
 const oneYear = oneDay * 365
 const immutableCacheTime = oneYear
 // The not found time should be small to help in the following case:
-// 1. Somebody requests an exact version that doesn't exists, CloudFront caches the 404 response;
+// 1. Somebody requests an exact version that doesn't exist, CloudFront caches the 404 response;
 // 2. The exact version is published and the inexact endpoint redirects to it.
 const notFoundBrowserCacheTime = oneHour
 const tempNotFoundCdnCacheTime = oneMinute * 5
-const tempRedirectBrowserCacheTime = oneDay * 7
-const tempRedirectCdnCacheTime = oneHour
-const monitoringBrowserCacheTime = tempRedirectBrowserCacheTime
+const tempAliasBrowserCacheTime = oneDay * 7
+const tempAliasCdnCacheTime = oneHour * 3
+const monitoringBrowserCacheTime = tempAliasBrowserCacheTime
 const monitoringCdnCacheTime = immutableCacheTime
 
 /**
@@ -39,20 +40,28 @@ export const handler: CloudFrontRequestHandler = httpUtil.withBestPractices(asyn
   if (!uriData) {
     return makeNotFoundResponse(`The ${request.uri} path doesn't exist`, true)
   }
+  const { version, route } = uriData
 
-  // TypeScript doesn't guard the type if `uriData.version.requestedType === 'inexact'` is used
-  const { version } = uriData
-  if (version.requestedType === 'inexact') {
-    return await handleInexactProjectVersion({ ...uriData, version })
+  if (route.type === 'monitoring') {
+    return handleMonitoringRoute()
   }
-  return await handleExactProjectVersion({ ...uriData, version })
+  if (version.requestedType === 'inexact') {
+    return await handleInexactBundleVersion(version, route)
+  }
+  return await handleExactBundleVersion(version, route, false)
 })
 
-async function handleInexactProjectVersion({
-  project,
-  version,
-  route,
-}: UriDataInexactVersion): Promise<CloudFrontResultResponse> {
+function handleMonitoringRoute() {
+  return {
+    ...httpUtil.okStatus,
+    headers: httpUtil.makeCacheControlHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
+  }
+}
+
+async function handleInexactBundleVersion(
+  version: InexactVersion,
+  route: ProjectPackageMainBundle,
+): Promise<CloudFrontResultResponse> {
   const exactVersion = await getPackageGreatestVersion(
     version.npmPackage,
     intersectVersionRanges(version.versionRange, version.requestedRange),
@@ -64,28 +73,22 @@ async function handleInexactProjectVersion({
     return makeNotFoundResponse(`There is no version matching ${version.requestedRange.start}.*`, false)
   }
 
-  // If the route is a redirect, follow that redirect to make browser do 1 redirect instead of 2
-  const redirectUri = makeRequestUri(project.key, exactVersion, route.type === 'redirect' ? route.target : route.path)
-  return makeRedirectResponse(redirectUri, false)
+  return handleExactBundleVersion(
+    {
+      ...version,
+      requestedType: 'exact',
+      requestedVersion: exactVersion,
+    },
+    route,
+    true,
+  )
 }
 
-async function handleExactProjectVersion({
-  project,
-  version,
-  route,
-}: UriDataExactVersion): Promise<CloudFrontResultResponse> {
-  if (route.type === 'redirect') {
-    const redirectUri = makeRequestUri(project.key, version.requestedVersion, route.target)
-    return makeRedirectResponse(redirectUri, true)
-  }
-
-  if (route.type === 'monitoring') {
-    return {
-      ...httpUtil.okStatus,
-      headers: httpUtil.makeCacheControlHeaders(monitoringBrowserCacheTime, monitoringCdnCacheTime),
-    }
-  }
-
+async function handleExactBundleVersion(
+  version: ExactVersion,
+  route: ProjectPackageMainBundle,
+  fromInexactVersion: boolean,
+): Promise<CloudFrontResultResponse> {
   const [packageDirectory, buildBundle] = await Promise.all([
     downloadPackage(version.npmPackage, version.requestedVersion).catch((error) => {
       if (isNpmNotFoundError(error)) {
@@ -116,23 +119,13 @@ async function handleExactProjectVersion({
   return {
     ...httpUtil.okStatus,
     headers: {
-      ...httpUtil.makeCacheControlHeaders(immutableCacheTime),
+      ...httpUtil.makeCacheControlHeaders(
+        fromInexactVersion ? tempAliasBrowserCacheTime : immutableCacheTime,
+        fromInexactVersion ? tempAliasCdnCacheTime : immutableCacheTime,
+      ),
       'content-type': [{ value: 'text/javascript; charset=utf-8' }],
     },
     body: code,
-  }
-}
-
-function makeRedirectResponse(uri: string, isPermanent: boolean): CloudFrontResultResponse {
-  return {
-    ...(isPermanent ? httpUtil.permanentRedirectStatus : httpUtil.temporaryRedirectStatus),
-    headers: {
-      ...httpUtil.makeCacheControlHeaders(
-        isPermanent ? immutableCacheTime : tempRedirectBrowserCacheTime,
-        isPermanent ? immutableCacheTime : tempRedirectCdnCacheTime,
-      ),
-      location: [{ value: uri }],
-    },
   }
 }
 

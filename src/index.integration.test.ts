@@ -30,61 +30,45 @@ function callHandler(uri: string) {
   return handler(mocks.makeMockCloudFrontEvent(uri), mocks.makeMockLambdaContext(), () => undefined)
 }
 
-describe('inexact version', () => {
-  it('redirects to the latest appropriate version', async () => {
-    const response = await callHandler('/fingerprintjs/v3.1')
-    expect(response).toEqual({
-      status: '302',
-      statusDescription: 'Found',
-      headers: expect.objectContaining({
-        location: [{ value: '/fingerprintjs/v3.1.3/esm.min.js' }],
-        'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
-      }),
-    })
+it('downloads and builds the latest suitable version', async () => {
+  // This version imports `tslib`, so the proper dependency handling is checked too
+  const response = await callHandler('/fingerprintjs/v3.1')
+  expect(response).toEqual({
+    status: '200',
+    headers: expect.objectContaining({
+      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
+      'content-type': [{ value: 'text/javascript; charset=utf-8' }],
+    }),
+    body: expect.anything(),
   })
+  expect(response?.body).toMatchSnapshot()
+  expect(response?.headers?.etag).toMatchSnapshot()
+})
 
-  it('handles missing version', async () => {
-    // This version is within the project, but it doesn't really exist
-    const response = await callHandler('/fingerprintjs/v3.54/esm.min.js')
-    expect(response).toEqual({
-      status: '404',
-      statusDescription: 'Not Found',
-      headers: expect.objectContaining({
-        'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
-        'content-type': [{ value: 'text/plain; charset=utf-8' }],
-      }),
-      body: 'There is no version matching 3.54.*',
-    })
+it('handles missing inexact version', async () => {
+  // This version is within the project, but it doesn't really exist
+  const response = await callHandler('/botd/v1.54/esm.min.js')
+  expect(response).toEqual({
+    status: '404',
+    statusDescription: 'Not Found',
+    headers: expect.objectContaining({
+      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
+      'content-type': [{ value: 'text/plain; charset=utf-8' }],
+    }),
+    body: 'There is no version matching 1.54.*',
   })
 })
 
-describe('exact version', () => {
-  it('downloads and builds', async () => {
-    // This version imports `tslib`, so the proper dependency handling is checked too
-    const response = await callHandler('/botd/v0.1.20/iife.min.js')
-    expect(response).toEqual({
-      status: '200',
-      headers: expect.objectContaining({
-        'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+\s*$/) }],
-        'content-type': [{ value: 'text/javascript; charset=utf-8' }],
-      }),
-      body: expect.anything(),
-    })
-    expect(response?.body).toMatchSnapshot()
-    expect(response?.headers?.etag).toMatchSnapshot()
-  })
-
-  it('handles missing version', async () => {
-    // This version is within the project, but it doesn't really exist
-    const response = await callHandler('/fingerprintjs/v3.1.9/esm.min.js')
-    expect(response).toEqual({
-      status: '404',
-      statusDescription: 'Not Found',
-      headers: expect.objectContaining({
-        'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
-        'content-type': [{ value: 'text/plain; charset=utf-8' }],
-      }),
-      body: 'There is no version 3.1.9',
-    })
+it('handles missing exact version', async () => {
+  // This version is within the project, but it doesn't really exist
+  const response = await callHandler('/fingerprintjs/v3.1.9/esm.min.js')
+  expect(response).toEqual({
+    status: '404',
+    statusDescription: 'Not Found',
+    headers: expect.objectContaining({
+      'cache-control': [{ value: expect.stringMatching(/^\s*public,\s*max-age=\d+,\s*s-maxage=\d+\s*$/) }],
+      'content-type': [{ value: 'text/plain; charset=utf-8' }],
+    }),
+    body: 'There is no version 3.1.9',
   })
 })

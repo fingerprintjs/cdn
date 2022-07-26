@@ -9,11 +9,6 @@ export const okStatus: Status = {
   status: '200',
 }
 
-export const permanentRedirectStatus: Status = {
-  status: '301',
-  statusDescription: 'Moved Permanently',
-}
-
 export const temporaryRedirectStatus: Status = {
   status: '302',
   statusDescription: 'Found',

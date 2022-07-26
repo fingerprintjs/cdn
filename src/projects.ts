@@ -21,11 +21,14 @@ export interface ProjectVersion {
   routes: Record<string, ProjectRoute>
 }
 
-export type ProjectRoute = ProjectRedirect | ProjectPackageMainBundle | ProjectPackageMonitoring
+export type ProjectRoute = ProjectRouteAlias | ProjectPackageMainBundle | ProjectPackageMonitoring
 
-export interface ProjectRedirect {
-  type: 'redirect'
-  /** A path within the same project and version. The target may but shouldn't be a redirect. */
+/**
+ * An alias for another route in the same project and version
+ */
+export interface ProjectRouteAlias {
+  type: 'alias'
+  /** The route key */
   target: string
 }
 
@@ -75,7 +78,7 @@ export const projects: Record<string, Project> = {
         npmPackage: '@fingerprintjs/fingerprintjs',
         versionRange: { start: '3' },
         routes: {
-          '': { type: 'redirect', target: 'esm.min.js' },
+          '': { type: 'alias', target: 'esm.min.js' },
           'iife.js': { ...fingerprintJsRouteCommon, format: 'iife' },
           'iife.min.js': { ...fingerprintJsRouteCommon, format: 'iife', minified: true },
           'esm.js': { ...fingerprintJsRouteCommon, format: 'esm' },
@@ -96,7 +99,7 @@ export const projects: Record<string, Project> = {
         versionRange: { start: '0.1.6' }, // The older versions have invalid Node packages
         excludeVersions: ['0.1.10', '0.1.16', '0.1.16-beta.0'],
         routes: {
-          '': { type: 'redirect', target: 'esm.min.js' },
+          '': { type: 'alias', target: 'esm.min.js' },
           'iife.js': { ...botdRouteCommon, format: 'iife' },
           'iife.min.js': { ...botdRouteCommon, format: 'iife', minified: true },
           'esm.js': { ...botdRouteCommon, format: 'esm' },

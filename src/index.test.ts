@@ -8,6 +8,17 @@ import { getBodyHash } from './utils/http'
  * These tests make no real HTTP requests. The tests with real requests are the "integration" tests.
  */
 
+const packageFiles = {
+  'package.json': '{"module": "index.js"}',
+  'index.js': `import {__assign} from 'tslib'
+export function test() {
+  if (!window.__fpjs_d_m) {
+    console.log('Test') // This part shall be removed in result of the "fingerprintjs" project replacements
+  }
+  return __assign({}, {})
+}`,
+}
+
 beforeAll(() => {
   nock.disableNetConnect()
 })
@@ -79,44 +90,36 @@ describe('inexact version', () => {
     checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMax: 1000 * 60 * 10 })
   })
 
-  it('redirects to the exact version', async () => {
+  it('builds unminified UMD of the latest suitable version', async () => {
+    nock('https://registry.npmjs.org')
+      .get('/@fpjs-incubator/botd-agent/-/botd-agent-0.1.15.tgz') // Version 0.1.16 is excluded in the project configuration
+      .reply(200, mocks.mockNpmPackageDownloadStream(packageFiles), {
+        'Content-Type': 'application/octet-stream',
+      })
     const response = await callHandler('/botd/v0.1/umd.js')
     expect(response).toEqual({
-      status: '302',
-      statusDescription: 'Found',
+      status: '200',
       headers: expect.objectContaining({
-        location: [{ value: '/botd/v0.1.15/umd.js' }], // Version 0.1.16 is excluded in the project configuration
+        'content-type': [{ value: 'text/javascript; charset=utf-8' }],
       }),
+      body: expect.anything(),
     })
+    expect(response?.body).toMatchSnapshot()
+    expect(response?.headers?.etag).toMatchSnapshot()
     checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMax: 1000 * 60 * 60 * 24 })
   })
 
-  it('follows the route redirect', async () => {
-    const response = await callHandler('/botd/v0.2')
+  it('monitors', async () => {
+    const response = await callHandler('/fingerprintjs/v3/npm-monitoring')
     expect(response).toEqual({
-      status: '302',
-      statusDescription: 'Found',
-      headers: expect.objectContaining({
-        location: [{ value: '/botd/v0.2.1/esm.min.js' }],
-      }),
+      status: '200',
+      headers: expect.objectContaining({}),
     })
-    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMax: 1000 * 60 * 60 * 24 })
+    checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 })
 
 describe('exact version', () => {
-  it('redirects', async () => {
-    const response = await callHandler('/fingerprintjs/v3.0.1')
-    expect(response).toEqual({
-      status: '301',
-      statusDescription: 'Moved Permanently',
-      headers: expect.objectContaining({
-        location: [{ value: '/fingerprintjs/v3.0.1/esm.min.js' }],
-      }),
-    })
-    checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
-  })
-
   it('monitors', async () => {
     const response = await callHandler('/fingerprintjs/v3.0.1/npm-monitoring')
     expect(response).toEqual({
@@ -149,46 +152,18 @@ describe('exact version', () => {
     checkCacheHeaders(response, { browserMax: 1000 * 60 * 60 * 2, cdnMin: 1000 * 60 * 60 * 24 * 30 })
   })
 
-  const packageFiles = {
-    'package.json': '{"module": "index.js"}',
-    'index.js': `import {__assign} from 'tslib'
-export function test() {
-  if (!window.__fpjs_d_m) {
-    console.log('Test') // Shall be removed
-  }
-  return __assign({}, {})
-}`,
-  }
-
-  it('builds unminified UMD with replacements', async () => {
+  it('follows alias and builds minified ESM with replacements', async () => {
     nock('https://registry.npmjs.org')
       .get('/@fingerprintjs/fingerprintjs/-/fingerprintjs-3.2.1.tgz')
       .reply(200, mocks.mockNpmPackageDownloadStream(packageFiles), {
         'Content-Type': 'application/octet-stream',
       })
-    const response = await callHandler('/fingerprintjs/v3.2.1/umd.js')
+    const response = await callHandler('/fingerprintjs/v3.2.1')
     expect(response).toEqual({
       status: '200',
       headers: expect.objectContaining({
         'content-type': [{ value: 'text/javascript; charset=utf-8' }],
       }),
-      body: expect.anything(),
-    })
-    expect(response?.body).toMatchSnapshot()
-    expect(response?.headers?.etag).toMatchSnapshot()
-    checkCacheHeaders(response, { browserMin: 1000 * 60 * 60 * 24 * 30, cdnMin: 1000 * 60 * 60 * 24 * 30 })
-  })
-
-  it('builds minified ESM', async () => {
-    nock('https://registry.npmjs.org')
-      .get('/@fpjs-incubator/botd-agent/-/botd-agent-0.1.20.tgz')
-      .reply(200, mocks.mockNpmPackageDownloadStream(packageFiles), {
-        'Content-Type': 'application/octet-stream',
-      })
-    const response = await callHandler('/botd/v0.1.20/esm.min.js')
-    expect(response).toEqual({
-      status: '200',
-      headers: expect.objectContaining({}),
       body: expect.anything(),
     })
     expect(response?.body).toMatchSnapshot()
