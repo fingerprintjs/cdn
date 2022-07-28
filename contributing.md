@@ -60,7 +60,7 @@ Once you add the project, deploy the CDN.
 
 Publish the version to NPM, the CDN will serve it automatically.
 
-The inexact redirect cache will update within an hour.
+The inexact version cache will update within few hours.
 If you want to clear the cache sooner, invalidate the cache in the CloudFront distribution (see the deployment section).
 
 ## Deployment
