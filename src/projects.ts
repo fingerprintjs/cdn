@@ -63,7 +63,8 @@ const fingerprintJsRouteCommon = {
   replacements: { 'window.__fpjs_d_m': 'true' },
 } as const
 
-const botdRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
+const botdLegacyRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
+const botdRouteCommon = { type: 'packageMain', globalVariableName: 'BotD' } as const
 
 const fingerprintJsProGtmRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintjsProGTM' } as const
 
@@ -100,12 +101,26 @@ export const projects: Record<string, Project> = {
         excludeVersions: ['0.1.10', '0.1.16', '0.1.16-beta.0'],
         routes: {
           '': { type: 'alias', target: 'esm.min.js' },
+          'iife.js': { ...botdLegacyRouteCommon, format: 'iife' },
+          'iife.min.js': { ...botdLegacyRouteCommon, format: 'iife', minified: true },
+          'esm.js': { ...botdLegacyRouteCommon, format: 'esm' },
+          'esm.min.js': { ...botdLegacyRouteCommon, format: 'esm', minified: true },
+          'umd.js': { ...botdLegacyRouteCommon, format: 'umd' },
+          'umd.min.js': { ...botdLegacyRouteCommon, format: 'umd', minified: true },
+        },
+      },
+      {
+        npmPackage: '@fingerprintjs/botd',
+        versionRange: { start: '1.0.0' },
+        routes: {
+          '': { type: 'alias', target: 'esm.min.js' },
           'iife.js': { ...botdRouteCommon, format: 'iife' },
           'iife.min.js': { ...botdRouteCommon, format: 'iife', minified: true },
           'esm.js': { ...botdRouteCommon, format: 'esm' },
           'esm.min.js': { ...botdRouteCommon, format: 'esm', minified: true },
           'umd.js': { ...botdRouteCommon, format: 'umd' },
           'umd.min.js': { ...botdRouteCommon, format: 'umd', minified: true },
+          'npm-monitoring': { type: 'monitoring' },
         },
       },
     ],
