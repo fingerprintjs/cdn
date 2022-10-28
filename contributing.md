@@ -219,7 +219,7 @@ You can create an alarm for it:
 - Additional configuration:
     - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as ignore (maintain the alarm state)`
-- Threshold: `Static`, `Greater >`, `3000` (milliseconds)
+- Threshold: `Static`, `Greater >`, `6000` (milliseconds)
 - Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-originlatency`
