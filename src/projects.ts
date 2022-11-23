@@ -64,7 +64,11 @@ const fingerprintJsRouteCommon = {
 } as const
 
 const botdLegacyRouteCommon = { type: 'packageMain', globalVariableName: 'Botd' } as const
-const botdRouteCommon = { type: 'packageMain', globalVariableName: 'BotD' } as const
+const botdRouteCommon = {
+  type: 'packageMain',
+  globalVariableName: 'BotD',
+  replacements: { 'window.__fpjs_d_m': 'true' },
+} as const
 
 const fingerprintJsProGtmRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintjsProGTM' } as const
 
