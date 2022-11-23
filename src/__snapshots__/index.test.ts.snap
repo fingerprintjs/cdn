@@ -1,14 +1,14 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`exact version builds minified ESM 1`] = `
-"var n=function(){return n=Object.assign||function(n){for(var r,t=1,o=arguments.length;t<o;t++)for(var e in r=arguments[t])Object.prototype.hasOwnProperty.call(r,e)&&(n[e]=r[e]);return n},n.apply(this,arguments)};function r(){return window.__fpjs_d_m||console.log(\\"Test\\"),n({},{})}export{r as test};
+"var n=function(){return n=Object.assign||function(n){for(var r,t=1,o=arguments.length;t<o;t++)for(var e in r=arguments[t])Object.prototype.hasOwnProperty.call(r,e)&&(n[e]=r[e]);return n},n.apply(this,arguments)};function r(){return window.__fpjs_d_m||console.log("Test"),n({},{})}export{r as test};
 "
 `;
 
 exports[`exact version builds minified ESM 2`] = `
-Array [
-  Object {
-    "value": "\\"dBhlDEIPIeluHpJTNf6LmEsi+1c\\"",
+[
+  {
+    "value": ""dBhlDEIPIeluHpJTNf6LmEsi+1c"",
   },
 ]
 `;
@@ -20,13 +20,13 @@ exports[`exact version builds unminified UMD with replacements 1`] = `
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.FingerprintJS = {}));
 })(this, (function (exports) { 'use strict';
 
-    /*! *****************************************************************************
+    /******************************************************************************
     Copyright (c) Microsoft Corporation.
 
     Permission to use, copy, modify, and/or distribute this software for any
     purpose with or without fee is hereby granted.
 
-    THE SOFTWARE IS PROVIDED \\"AS IS\\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
     REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
     AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
     INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
@@ -52,16 +52,14 @@ exports[`exact version builds unminified UMD with replacements 1`] = `
 
     exports.test = test;
 
-    Object.defineProperty(exports, '__esModule', { value: true });
-
 }));
 "
 `;
 
 exports[`exact version builds unminified UMD with replacements 2`] = `
-Array [
-  Object {
-    "value": "\\"MxP2hmISRk7eDrj9+p1x86U+ra4\\"",
+[
+  {
+    "value": ""HyvbPZ1n88H9T4PTPQ2W/FrdS60"",
   },
 ]
 `;

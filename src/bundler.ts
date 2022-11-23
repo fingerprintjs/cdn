@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import * as path from 'path'
 import * as rollup from 'rollup'
 import { nodeResolve as rollupNodeResolve } from '@rollup/plugin-node-resolve'
-import { terser as terserPlugin } from 'rollup-plugin-terser'
+import terserPlugin from '@rollup/plugin-terser'
 import { makeTemporaryDirectory, readFirstCharacters } from './utils/filesystem'
 import rollupCdnAdjust from './utils/rollup_cdn_adjust'
 
