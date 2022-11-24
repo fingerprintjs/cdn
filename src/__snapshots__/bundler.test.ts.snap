@@ -2,19 +2,19 @@
 
 exports[`buildBundle builds minified IIFE and preserves banner 1`] = `
 "// Copyright John Doe 2021
-var MyTest=function(r){\\"use strict\\";var t=function(){return t=Object.assign||function(r){for(var t,e=1,n=arguments.length;e<n;e++)for(var o in t=arguments[e])Object.prototype.hasOwnProperty.call(t,o)&&(r[o]=t[o]);return r},t.apply(this,arguments)};return r.test=function(){return t({foo:\\"Phu\\"},{bar:\\"Baar\\"})},Object.defineProperty(r,\\"__esModule\\",{value:!0}),r}({});
+var MyTest=function(r){"use strict";var t=function(){return t=Object.assign||function(r){for(var t,n=1,e=arguments.length;n<e;n++)for(var a in t=arguments[n])Object.prototype.hasOwnProperty.call(t,a)&&(r[a]=t[a]);return r},t.apply(this,arguments)};return r.test=function(){return t({foo:"Phu"},{bar:"Baar"})},r}({});
 "
 `;
 
 exports[`buildBundle builds unminified ESM, preserves banner and replaces 1`] = `
 "/* Copyright John Doe 2021 */
-/*! *****************************************************************************
+/******************************************************************************
 Copyright (c) Microsoft Corporation.
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted.
 
-THE SOFTWARE IS PROVIDED \\"AS IS\\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
 REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
 AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
 INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM

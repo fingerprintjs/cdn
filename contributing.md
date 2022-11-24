@@ -219,7 +219,7 @@ You can create an alarm for it:
 - Additional configuration:
     - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as ignore (maintain the alarm state)`
-- Threshold: `Static`, `Greater >`, `5000` (milliseconds)
+- Threshold: `Static`, `Greater >`, `6000` (milliseconds)
 - Alarm state trigger: `In alarm`, then the same with `OK`
 - Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
 - Alarm name: `opencdn-alarm-originlatency`
@@ -260,7 +260,7 @@ Create an alarm:
     - DistributionId: (the distribution id)
 - Statistic: `Sum`
 - Period: `1 hour`
-- Threshold: `Anomaly detection`, `Outside of the band`, `15`
+- Threshold: `Anomaly detection`, `Outside of the band`, `25`
 - Additional configuration:
     - Datapoints to alarm: `1` out of `1`
     - Missing data treatment: `Treat missing data as bad (breaching threshold)`
@@ -296,7 +296,7 @@ Add a grantee:
 - Grantee: `c4c1ede66af53448b93c283ce9448c4ba468c9432aa01d700d3878632f77d2d0` (more details [here](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html?icmpid=docs_cf_help_panel#AccessLogsBucketAndFileOwnership))
 - All the checkboxes: yes
 
-Switch to the "Permissions" tab.
+Switch to the "Management" tab.
 Create a lifecycle rule:
 
 - Lifecycle rule name: `cleanup` (or whatever you want)

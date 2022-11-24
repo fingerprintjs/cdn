@@ -6,9 +6,9 @@ exports[`exact version follows alias and builds minified ESM with replacements 1
 `;
 
 exports[`exact version follows alias and builds minified ESM with replacements 2`] = `
-Array [
-  Object {
-    "value": "\\"BroUu1mLLUQXYPyYERJCMKNjRzw\\"",
+[
+  {
+    "value": ""BroUu1mLLUQXYPyYERJCMKNjRzw"",
   },
 ]
 `;
@@ -20,13 +20,13 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Botd = {}));
 })(this, (function (exports) { 'use strict';
 
-    /*! *****************************************************************************
+    /******************************************************************************
     Copyright (c) Microsoft Corporation.
 
     Permission to use, copy, modify, and/or distribute this software for any
     purpose with or without fee is hereby granted.
 
-    THE SOFTWARE IS PROVIDED \\"AS IS\\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
     REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
     AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
     INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
@@ -48,23 +48,21 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
 
     function test() {
       if (!window.__fpjs_d_m) {
-        console.log('Test'); // This part shall be removed in result of the \\"fingerprintjs\\" project replacements
+        console.log('Test'); // This part shall be removed in result of the "fingerprintjs" project replacements
       }
       return __assign({}, {})
     }
 
     exports.test = test;
 
-    Object.defineProperty(exports, '__esModule', { value: true });
-
 }));
 "
 `;
 
 exports[`inexact version builds unminified UMD of the latest suitable version 2`] = `
-Array [
-  Object {
-    "value": "\\"C884OmEvK0gb3cE99MAQ+/OrCcw\\"",
+[
+  {
+    "value": ""Zq9NO4l+8h4u8LyWfsjNCHXHxzM"",
   },
 ]
 `;

@@ -1,4 +1,4 @@
-import { TransformPluginContext } from 'rollup'
+import { Plugin, TransformHook, TransformPluginContext } from 'rollup'
 import rollupCdnAdjust from './rollup_cdn_adjust'
 
 const mockCode = `import * as foo from 'bar'
@@ -15,18 +15,24 @@ if ([TEST] === 'baz') {
 
 const mockPluginContext = {} as TransformPluginContext
 
+function callPluginTransform(plugin: Plugin, ...args: Parameters<TransformHook>) {
+  const transform = plugin.transform
+  if (typeof transform === 'function') {
+    return transform.apply(mockPluginContext, args)
+  }
+  throw new Error('plugin.transform is not a function')
+}
+
 it('does nothing when there are no replacements', () => {
-  expect(rollupCdnAdjust().transform?.call(mockPluginContext, mockCode, '/project/index.js')).toBeNull()
-  expect(rollupCdnAdjust({}).transform?.call(mockPluginContext, mockCode, '/project/index.js')).toBeNull()
-  expect(
-    rollupCdnAdjust({ replacements: {} }).transform?.call(mockPluginContext, mockCode, '/project/index.js'),
-  ).toBeNull()
+  expect(callPluginTransform(rollupCdnAdjust(), mockCode, '/project/index.js')).toBeNull()
+  expect(callPluginTransform(rollupCdnAdjust({}), mockCode, '/project/index.js')).toBeNull()
+  expect(callPluginTransform(rollupCdnAdjust({ replacements: {} }), mockCode, '/project/index.js')).toBeNull()
 })
 
 it('does nothing when the file is a Node module', () => {
   expect(
-    rollupCdnAdjust({ replacements: { '[TEST]': 'true' } }).transform?.call(
-      mockPluginContext,
+    callPluginTransform(
+      rollupCdnAdjust({ replacements: { '[TEST]': 'true' } }),
       mockCode,
       '/project/node_modules/foo/index.js',
     ),
@@ -35,13 +41,17 @@ it('does nothing when the file is a Node module', () => {
 
 it('replaces proper keywords', () => {
   expect(
-    rollupCdnAdjust({
-      replacements: {
-        '[TEST]': 'test()',
-        NAME: '"Bang"',
-        'window.__fpjs_d_m': 'false',
-      },
-    }).transform?.call(mockPluginContext, mockCode, '/index.js'),
+    callPluginTransform(
+      rollupCdnAdjust({
+        replacements: {
+          '[TEST]': 'test()',
+          NAME: '"Bang"',
+          'window.__fpjs_d_m': 'false',
+        },
+      }),
+      mockCode,
+      '/index.js',
+    ),
   ).toBe(`import * as foo from 'bar'
 
 if (false) {

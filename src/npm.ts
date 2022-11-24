@@ -2,10 +2,9 @@ import { promisify } from 'util'
 import * as stream from 'stream'
 import * as zlib from 'zlib'
 import * as path from 'path'
+import * as validateNpmName from 'validate-npm-package-name'
 import { compareVersions, isStableVersion, isSemVerVersion, isVersionInRange, VersionRange } from './utils/version'
 import { makeTemporaryDirectory } from './utils/filesystem'
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const validateNpmName = require('validate-npm-package-name')
 
 /**
  * Expected errors
