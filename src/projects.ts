@@ -82,6 +82,7 @@ export const projects: Record<string, Project> = {
       {
         npmPackage: '@fingerprintjs/fingerprintjs',
         versionRange: { start: '3' },
+        excludeVersions: ['4.2.0'],
         routes: {
           '': { type: 'alias', target: 'esm.min.js' },
           'iife.js': { ...fingerprintJsRouteCommon, format: 'iife' },
