@@ -12,9 +12,9 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             **/node_modules
@@ -32,7 +32,7 @@ jobs:
       - name: Integration tests
         run: yarn test:integration
       - name: Make an archive for AWS Lambda and save it as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Open CDN (upload me to Lambda)
           path: dist/*
