@@ -111,7 +111,7 @@ Add a trigger to the function: CloudFront. Fill the fields:
 
 Then deploy the code itself (see the next section).
 
-### Deployment
+### Deploying a code version
 
 GitHub Actions build the code for you when you push to `master`.
 You can find it as an artifact in the [Actions section](https://github.com/fingerprintjs/cdn/actions) of the repository.
@@ -153,49 +153,115 @@ See these log groups:
 
 #### Automatic error notifications
 
-Go to [AWS / CloudWatch / Alarms](https://console.aws.amazon.com/cloudwatch/home?#alarmsV2:).
-Create an alarm:
+Assuming AWS CloudFront metrics forwarding to Datadog is already configured.
 
-- Metric: `CloudFront > Per-Distribution Metrics`
-    - Metric name: `5xxErrorRate` (if you can't find it, select any and fill it manually on the next step)
-    - Region: `Global`
-    - DistributionId: (the distribution id)
-- Statistic: `Average`
-- Period: `1 hour`
-- Threshold: `Static`, `Greater >`, `1`
-- Additional configuration:
-    - Datapoints to alarm: `1` out of `1`
-    - Missing data treatment: `Treat missing data as good (not breaching threshold)`
-- Click "Next"
-- Alarm state trigger: `In alarm`, then the same with `OK`
-- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
-- Click "Next"
-- Alarm name: `opencdn-alarm-5xx`
-- Alarm description: `Too many 5XX responses from the Open CDN (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
-- Click "Next", "Create alarm"
+[Import a new monitor](https://app.datadoghq.com/monitors/create/import) in Datadog from these code snippets.
+Note that you need to replace `<DISTRIBUTION_ID>` and `<distribution_id>` with the distribution id (respecting the case):
 
-This alarm will trigger when the number of CloudFront distribution responses with 5XX HTTP code is too high.
+```json
+{
+	"name": "[prod] opencdn Outgoing 5XX responses",
+	"type": "query alert",
+	"query": "avg(last_1h):avg:aws.cloudfront.5xx_error_rate{distributionid:<distribution_id>} > 1",
+	"message": "{{#is_alert}}\n5XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 1
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"include_tags": true,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_all",
+        "new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 2,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
+
+This monitor will trigger an alarm when the number of CloudFront distribution responses with 5XX HTTP code is too high.
 CloudFront doesn't provide information about the exact reasons. The reasons can be lambda errors (see above), internal AWS errors or an incorrect configuration.
 
 Lambda errors not necessary lead to 5XX responses (for example, when CloudFront has [a cache](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/HTTPStatusCodes.html#HTTPStatusCodes-no-custom-error-pages) for the request).
 So you need more alarms not to miss the lambda fails:
 
-1. For uncaught lambda exceptions (tip: alarm can be copied):
-    - Metric name: `LambdaExecutionError`
-    - Period: `1 hour`
-    - Threshold: `Static`, `Greater >`, `4`
-    - Datapoints to alarm: `1` out of `1`
-    - Alarm name: `opencdn-alarm-lambdaerror`
-    - Alarm description: `Too many uncaught exceptions in the Open CDN lambda (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
-    - The rest is the same
-2. For invalid lambda responses:
-    - Metric name: `LambdaValidationError`
-    - Period: `1 hour`
-    - Threshold: `Static`, `Greater >`, `0`
-    - Datapoints to alarm: `1` out of `1`
-    - Alarm name: `opencdn-alarm-lambdainvalid`
-    - Alarm description: `A response with an invalid format was returned from the Open CDN lambda (GitHub repository: fingerprintjs/cdn). See the contributing.md file of the repository for more details.`
-    - The rest is the same
+```json
+{
+	"id": 152194304,
+	"name": "[prod] opencdn Uncaught lambda exceptions",
+	"type": "query alert",
+	"query": "sum(last_1h):sum:aws.cloudfront.lambda_execution_error{distributionid:<distribution_id>}.as_count() > 4",
+	"message": "{{#is_alert}}\nMore than {{threshold}} uncaught exceptions recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to [AWS CloudFront Monitoring](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring), open the Lambda@Edge tab, select `opencdn-codegen`. Scroll down to the Errors chart.\n2. **Find the Lambda logs in that region**: On the same page scroll up, click the \"View function logs\" dropdown and select the region. On the logs page click \"Search log group\" and type \"error\" in the search box.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 4
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"include_tags": true,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_all",
+		"timeout_h": 1,
+		"new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 2,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
+
+```json
+{
+	"name": "[prod] opencdn Invalid lambda response",
+	"type": "query alert",
+	"query": "sum(last_1h):sum:aws.cloudfront.lambda_validation_error{distributionid:<distribution_id>}.as_count() > 0",
+	"message": "{{#is_alert}}\nMore than {{threshold}} invalid lambda responses recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to AWS CloudFront Monitoring, [the Open CDN distribution](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring/distribution/<DISTRIBUTION_ID>), open the \"Lambda@Edge errors\" tab. Scroll down to the \"Invalid function responses\" chart.\n2. **Find the CloudFront logs in that region**: Go to [the distribution log group](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Fcloudfront$252FLambdaEdge$252F<DISTRIBUTION_ID>/log-events$3FfilterPattern$3DValidation+error) in CloudWatch, select the region you need and search for \"Validation error\".\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 0
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"include_tags": true,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_all",
+		"timeout_h": 1,
+		"new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 2,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
+
+Note: the above 2 monitors are configured to resolve the alarm after 1 hour of missing data,
+because the underlying metrics don't report `0` when everything goes well. That is, the data are missing when the state is good.
 
 See [the CloudFrond documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/viewing-cloudfront-metrics.html) to learn what other metrics can be watched.
 
@@ -208,66 +274,112 @@ select "Enabled", click "Enable metrics".
 
 Now the "Origin latency" chart is available on the distribution metrics page.
 
-You can create an alarm for it:
-
-- Metric: `CloudFront > Per-Distribution Metrics`
-    - Metric name: `OriginLatency`
-    - Region: `Global`
-    - DistributionId: (the distribution id)
-- Statistic: `p90` (the 90th percentile; [possible statistics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Statistics-definitions.html))
-- Period: `4 hours` (Custom — 14400 seconds)
-- Additional configuration:
-    - Datapoints to alarm: `1` out of `1`
-    - Missing data treatment: `Treat missing data as ignore (maintain the alarm state)`
-- Threshold: `Static`, `Greater >`, `6000` (milliseconds)
-- Alarm state trigger: `In alarm`, then the same with `OK`
-- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
-- Alarm name: `opencdn-alarm-originlatency`
-- Alarm description: `Too high execution duration of the Open CDN lambda (GitHub repository: fingerprintjs/cdn)`
+```json
+{
+	"name": "[prod] opencdn Lambda execution duration",
+	"type": "query alert",
+	"query": "avg(last_4h):avg:aws.cloudfront.origin_latency{distributionid:<distribution_id>} > 4000",
+	"message": "{{#is_alert}}\nAverage lambda execution duration is more than {{threshold}}ms.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 4000
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"include_tags": true,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_all",
+		"new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 3,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
 
 #### Notifications about too many 4XX error
 
-Many 404 errors can be caused by an incorrect redirect.
-It is not a runtime exception, this is an error in the algorithm itself.
+Many 404 errors can be caused by an incidental URL removal.
 
-Create an alarm:
-
-- Metric: `CloudFront > Per-Distribution Metrics`
-    - Metric name: `4xxErrorRate`
-    - Region: `Global`
-    - DistributionId: (the distribution id)
-- Statistic: `Average`
-- Period: `1 hour`
-- Threshold: `Static`, `Greater >`, `20`
-- Additional configuration:
-    - Datapoints to alarm: `1` out of `1`
-    - Missing data treatment: `Treat missing data as good (not breaching threshold)`
-- Alarm state trigger: `In alarm`, then the same with `OK`
-- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
-- Alarm name: `opencdn-alarm-4xx`
-- Alarm description: `Too many 4XX responses from the Open CDN (GitHub repository: fingerprintjs/cdn)`
+```json
+{
+	"name": "[prod] opencdn Outgoing 4XX responses",
+	"type": "query alert",
+	"query": "avg(last_1h):avg:aws.cloudfront.4xx_error_rate{distributionid:<distribution_id>} > 10",
+	"message": "{{#is_alert}}\n4XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 10
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"include_tags": true,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_all",
+		"new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 2,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
 
 #### Notifications about steep changes in number of requests
 
 A rapid fall in number of requests can be caused by general problems with the distribution, such as incorrect domain name setup.
 A rapid rise can cause unwanted spending.
 
-Create an alarm:
-
-- Metric: `CloudFront > Per-Distribution Metrics`
-    - Metric name: `Requests`
-    - Region: `Global`
-    - DistributionId: (the distribution id)
-- Statistic: `Sum`
-- Period: `1 hour`
-- Threshold: `Anomaly detection`, `Outside of the band`, `25`
-- Additional configuration:
-    - Datapoints to alarm: `1` out of `1`
-    - Missing data treatment: `Treat missing data as bad (breaching threshold)`
-- Alarm state trigger: `In alarm`, then the same with `OK`
-- Select an SNS topic: see the SNS documentation to learn how you can deliver notifications; you can just remove the notification
-- Alarm name: `opencdn-alarm-requests`
-- Alarm description: `Unusual number of requests to the Open CDN (GitHub repository: fingerprintjs/cdn)`
+```json
+{
+	"name": "[prod] opencdn Number of incoming requests",
+	"type": "query alert",
+	"query": "avg(last_1d):anomalies(sum:aws.cloudfront.requests{distributionid:<distribution_id>}.as_count(), 'agile', 5, direction='both', interval=300, alert_window='last_1h', seasonality='weekly', count_default_zero='true', timezone='utc') >= 1",
+	"message": "{{#is_alert}}\nUnusual incoming requests rate.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"tags": [
+		"service:opencdn",
+		"env:prod"
+	],
+	"options": {
+		"thresholds": {
+			"critical": 1,
+			"critical_recovery": 0
+		},
+		"notify_audit": false,
+		"require_full_window": false,
+		"notify_no_data": false,
+		"renotify_interval": 0,
+		"threshold_windows": {
+			"trigger_window": "last_1h",
+			"recovery_window": "last_15m"
+		},
+		"include_tags": false,
+		"evaluation_delay": 900,
+		"notification_preset_name": "hide_query",
+		"new_host_delay": 300,
+		"silenced": {}
+	},
+	"priority": 4,
+	"restriction_policy": {
+		"bindings": []
+	}
+}
+```
 
 #### Cost monitoring
 
