@@ -201,7 +201,7 @@ So you need more alarms not to miss the lambda fails:
 	"name": "[prod] opencdn Uncaught lambda exceptions",
 	"type": "query alert",
 	"query": "sum(last_1h):sum:aws.cloudfront.lambda_execution_error{distributionid:<distribution_id>}.as_count() > 4",
-	"message": "{{#is_alert}}\nMore than {{threshold}} uncaught exceptions recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to [AWS CloudFront Monitoring](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring), open the Lambda@Edge tab, select `opencdn-codegen`. Scroll down to the Errors chart.\n2. **Find the Lambda logs in that region**: On the same page scroll up, click the \"View function logs\" dropdown and select the region. On the logs page click \"Search log group\" and type \"error\" in the search box.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+	"message": "{{#is_alert}}\nMore than {{threshold}} uncaught exceptions recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to [AWS CloudFront Monitoring](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring), open the Lambda@Edge tab, select `opencdn-codegen`. Scroll down to the Errors chart.\n2. **Find the Lambda logs in that region**: On the same page scroll up, click the \"View function logs\" dropdown and select the region. On the logs page click \"Search log group\" and type \"?error ?timeout\" in the search box.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
 	"tags": [
 		"service:opencdn",
 		"env:prod"
