@@ -349,7 +349,7 @@ A rapid rise can cause unwanted spending.
 {
 	"name": "[prod] opencdn Number of incoming requests",
 	"type": "query alert",
-	"query": "avg(last_1d):anomalies(sum:aws.cloudfront.requests{distributionid:<distribution_id>}.as_count(), 'agile', 5, direction='both', interval=300, alert_window='last_1h', seasonality='weekly', count_default_zero='true', timezone='utc') >= 1",
+	"query": "avg(last_1d):anomalies(sum:aws.cloudfront.requests{distributionid:<distribution_id>}.as_count(), 'agile', 7, direction='both', interval=300, alert_window='last_1h', seasonality='weekly', count_default_zero='true', timezone='utc') >= 1",
 	"message": "{{#is_alert}}\nUnusual incoming requests rate.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
 	"tags": [
 		"service:opencdn",
