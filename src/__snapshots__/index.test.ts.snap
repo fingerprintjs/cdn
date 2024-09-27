@@ -34,6 +34,8 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
     OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
     ***************************************************************************** */
+    /* global Reflect, Promise */
+
 
     var __assign = function() {
         __assign = Object.assign || function __assign(t) {
@@ -62,7 +64,7 @@ exports[`inexact version builds unminified UMD of the latest suitable version 1`
 exports[`inexact version builds unminified UMD of the latest suitable version 2`] = `
 [
   {
-    "value": ""Zq9NO4l+8h4u8LyWfsjNCHXHxzM"",
+    "value": ""sJpkUE9G5HMF2K2ifnjid2Pb0fc"",
   },
 ]
 `;
