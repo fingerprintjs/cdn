@@ -160,32 +160,32 @@ Note that you need to replace `<DISTRIBUTION_ID>` and `<distribution_id>` with t
 
 ```json
 {
-	"name": "[prod] opencdn Outgoing 5XX responses",
-	"type": "query alert",
-	"query": "avg(last_1h):avg:aws.cloudfront.5xx_error_rate{distributionid:<distribution_id>} > 1",
-	"message": "{{#is_alert}}\n5XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 1
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"include_tags": true,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_all",
+    "name": "[prod] opencdn Outgoing 5XX responses",
+    "type": "query alert",
+    "query": "avg(last_1h):avg:aws.cloudfront.5xx_error_rate{distributionid:<distribution_id>} > 0.1",
+    "message": "{{#is_alert}}\n5XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 0.1
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "renotify_interval": 0,
+        "include_tags": true,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_all",
+        "notify_no_data": false,
         "new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 2,
-	"restriction_policy": {
-		"bindings": []
-	}
+        "silenced": {}
+    },
+    "priority": 2,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
@@ -197,66 +197,66 @@ So you need more alarms not to miss the lambda fails:
 
 ```json
 {
-	"id": 152194304,
-	"name": "[prod] opencdn Uncaught lambda exceptions",
-	"type": "query alert",
-	"query": "sum(last_1h):sum:aws.cloudfront.lambda_execution_error{distributionid:<distribution_id>}.as_count() > 4",
-	"message": "{{#is_alert}}\nMore than {{threshold}} uncaught exceptions recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to [AWS CloudFront Monitoring](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring), open the Lambda@Edge tab, select `opencdn-codegen`. Scroll down to the Errors chart.\n2. **Find the Lambda logs in that region**: On the same page scroll up, click the \"View function logs\" dropdown and select the region. On the logs page click \"Search log group\" and type \"?error ?timeout\" in the search box.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 4
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"include_tags": true,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_all",
-		"timeout_h": 1,
-		"new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 2,
-	"restriction_policy": {
-		"bindings": []
-	}
+    "id": 152194304,
+    "name": "[prod] opencdn Uncaught lambda exceptions",
+    "type": "query alert",
+    "query": "sum(last_1h):sum:aws.cloudfront.lambda_execution_error{distributionid:<distribution_id>}.as_count() > 4",
+    "message": "{{#is_alert}}\nMore than {{threshold}} uncaught exceptions recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to [AWS CloudFront Monitoring](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring), open the Lambda@Edge tab, select `opencdn-codegen`. Scroll down to the Errors chart.\n2. **Find the Lambda logs in that region**: On the same page scroll up, click the \"View function logs\" dropdown and select the region. On the logs page click \"Search log group\" and type \"?error ?timeout\" in the search box.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 4
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "notify_no_data": false,
+        "renotify_interval": 0,
+        "include_tags": true,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_all",
+        "timeout_h": 1,
+        "new_host_delay": 300,
+        "silenced": {}
+    },
+    "priority": 2,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
 ```json
 {
-	"name": "[prod] opencdn Invalid lambda response",
-	"type": "query alert",
-	"query": "sum(last_1h):sum:aws.cloudfront.lambda_validation_error{distributionid:<distribution_id>}.as_count() > 0",
-	"message": "{{#is_alert}}\nMore than {{threshold}} invalid lambda responses recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to AWS CloudFront Monitoring, [the Open CDN distribution](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring/distribution/<DISTRIBUTION_ID>), open the \"Lambda@Edge errors\" tab. Scroll down to the \"Invalid function responses\" chart.\n2. **Find the CloudFront logs in that region**: Go to [the distribution log group](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Fcloudfront$252FLambdaEdge$252F<DISTRIBUTION_ID>/log-events$3FfilterPattern$3DValidation+error) in CloudWatch, select the region you need and search for \"Validation error\".\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 0
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"include_tags": true,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_all",
-		"timeout_h": 1,
-		"new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 2,
-	"restriction_policy": {
-		"bindings": []
-	}
+    "name": "[prod] opencdn Invalid lambda response",
+    "type": "query alert",
+    "query": "sum(last_1h):sum:aws.cloudfront.lambda_validation_error{distributionid:<distribution_id>}.as_count() > 0",
+    "message": "{{#is_alert}}\nMore than {{threshold}} invalid lambda responses recently. They may have caused 5XX responses.\n\nHow to view the error messages:\n1. **Detect what region the errors happen in**: Go to AWS CloudFront Monitoring, [the Open CDN distribution](https://us-east-1.console.aws.amazon.com/cloudfront/v4/home?region=us-east-1#/monitoring/distribution/<DISTRIBUTION_ID>), open the \"Lambda@Edge errors\" tab. Scroll down to the \"Invalid function responses\" chart.\n2. **Find the CloudFront logs in that region**: Go to [the distribution log group](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Faws$252Fcloudfront$252FLambdaEdge$252F<DISTRIBUTION_ID>/log-events$3FfilterPattern$3DValidation+error) in CloudWatch, select the region you need and search for \"Validation error\".\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 0
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "notify_no_data": false,
+        "renotify_interval": 0,
+        "include_tags": true,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_all",
+        "timeout_h": 1,
+        "new_host_delay": 300,
+        "silenced": {}
+    },
+    "priority": 2,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
@@ -276,67 +276,67 @@ Now the "Origin latency" chart is available on the distribution metrics page.
 
 ```json
 {
-	"name": "[prod] opencdn Lambda execution duration",
-	"type": "query alert",
-	"query": "avg(last_4h):avg:aws.cloudfront.origin_latency{distributionid:<distribution_id>} > 4000",
-	"message": "{{#is_alert}}\nAverage lambda execution duration is more than {{threshold}}ms.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 4000
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"include_tags": true,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_all",
-		"new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 3,
-	"restriction_policy": {
-		"bindings": []
-	}
+    "name": "[prod] opencdn Lambda execution duration",
+    "type": "query alert",
+    "query": "avg(last_4h):avg:aws.cloudfront.origin_latency{distributionid:<distribution_id>} > 4000",
+    "message": "{{#is_alert}}\nAverage lambda execution duration is more than {{threshold}}ms.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 4000
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "notify_no_data": false,
+        "renotify_interval": 0,
+        "include_tags": true,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_all",
+        "new_host_delay": 300,
+        "silenced": {}
+    },
+    "priority": 3,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
 #### Notifications about too many 4XX error
 
-Many 404 errors can be caused by an incidental URL removal.
+Many 404 errors can be caused by an incidental endpoint removal.
 
 ```json
 {
-	"name": "[prod] opencdn Outgoing 4XX responses",
-	"type": "query alert",
-	"query": "avg(last_1h):avg:aws.cloudfront.4xx_error_rate{distributionid:<distribution_id>} > 10",
-	"message": "{{#is_alert}}\n4XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 10
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"include_tags": true,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_all",
-		"new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 2,
-	"restriction_policy": {
-		"bindings": []
-	}
+    "name": "[prod] opencdn Outgoing 4XX responses",
+    "type": "query alert",
+    "query": "avg(last_1h):avg:aws.cloudfront.4xx_error_rate{distributionid:<distribution_id>} > 1",
+    "message": "{{#is_alert}}\n4XX response rate is greater than {{threshold}}%.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 1
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "renotify_interval": 0,
+        "include_tags": true,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_all",
+        "notify_no_data": false,
+        "new_host_delay": 300,
+        "silenced": {}
+    },
+    "priority": 2,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
@@ -347,37 +347,37 @@ A rapid rise can cause unwanted spending.
 
 ```json
 {
-	"name": "[prod] opencdn Number of incoming requests",
-	"type": "query alert",
-	"query": "avg(last_1d):anomalies(sum:aws.cloudfront.requests{distributionid:<distribution_id>}.as_count(), 'agile', 7, direction='both', interval=300, alert_window='last_1h', seasonality='weekly', count_default_zero='true', timezone='utc') >= 1",
-	"message": "{{#is_alert}}\nUnusual incoming requests rate.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
-	"tags": [
-		"service:opencdn",
-		"env:prod"
-	],
-	"options": {
-		"thresholds": {
-			"critical": 1,
-			"critical_recovery": 0
-		},
-		"notify_audit": false,
-		"require_full_window": false,
-		"notify_no_data": false,
-		"renotify_interval": 0,
-		"threshold_windows": {
-			"trigger_window": "last_1h",
-			"recovery_window": "last_15m"
-		},
-		"include_tags": false,
-		"evaluation_delay": 900,
-		"notification_preset_name": "hide_query",
-		"new_host_delay": 300,
-		"silenced": {}
-	},
-	"priority": 4,
-	"restriction_policy": {
-		"bindings": []
-	}
+    "name": "[prod] opencdn Number of incoming requests",
+    "type": "query alert",
+    "query": "avg(last_1d):anomalies(sum:aws.cloudfront.requests{distributionid:<distribution_id>}.as_count(), 'agile', 7, direction='both', interval=300, alert_window='last_1h', seasonality='weekly', count_default_zero='true', timezone='utc') >= 1",
+    "message": "{{#is_alert}}\nUnusual incoming requests rate.\n{{/is_alert}}\n\nGitHub repository: https://github.com/fingerprintjs/cdn",
+    "tags": [
+        "service:opencdn",
+        "env:prod"
+    ],
+    "options": {
+        "thresholds": {
+            "critical": 1,
+            "critical_recovery": 0
+        },
+        "notify_audit": false,
+        "require_full_window": false,
+        "notify_no_data": false,
+        "renotify_interval": 0,
+        "threshold_windows": {
+            "trigger_window": "last_1h",
+            "recovery_window": "last_15m"
+        },
+        "include_tags": false,
+        "evaluation_delay": 900,
+        "notification_preset_name": "hide_query",
+        "new_host_delay": 300,
+        "silenced": {}
+    },
+    "priority": 4,
+    "restriction_policy": {
+        "bindings": []
+    }
 }
 ```
 
