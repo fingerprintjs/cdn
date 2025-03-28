@@ -13,7 +13,7 @@
     "@rollup/plugin-terser": "^0.1.0",
     "got": "^11.8.5",
     "rollup": "^3.29.5",
-    "tar-fs": "^2.1.1",
+    "tar-fs": "^2.1.2",
     "tslib": "^2.4.1",
     "validate-npm-package-name": "^5.0.0"
   },
