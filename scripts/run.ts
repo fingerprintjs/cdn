@@ -29,7 +29,7 @@ async function run() {
 function parseInput() {
   const uriArgIndex = process.argv.indexOf('--uri')
   if (uriArgIndex === -1 || uriArgIndex === process.argv.length - 1) {
-    throw 'The URI argument is missing. Try running the command with `--uri "/fingerprintjs/v3"`.'
+    throw 'The URI argument is missing. Try running the command with `--uri "/fingerprintjs/v5"`.'
   }
   const uri = process.argv[uriArgIndex + 1].split('?', 1)[0] // Query strings aren't supported
   const fullBody = process.argv.includes('--full-response-body')

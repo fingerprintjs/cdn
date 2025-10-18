@@ -13,7 +13,7 @@ yarn install
 Emulate a CloudFront request and see the response produced by the code:
 
 ```bash
-yarn run-lambda --uri /fingerprintjs/v3
+yarn run-lambda --uri /fingerprintjs/v5
 
 # See the full response body:
 yarn run-lambda --uri /botd/v0.1.20/esm.min.js --full-response-body
