@@ -20,11 +20,11 @@ CloudFront caches the responses so that the next requests are served instantly.
 An asset URL looks like this:
 
 ```
-https://openfpcdn.io/project/v3/file.js
+https://openfpcdn.io/project/v5/file.js
 ```
 
 - `project` is the project name. It matches the part after `https://github.com/fingerprintjs/`.
-- `3` is the project version. It can be either a major version (`3`), a minor version (`3.2`) or an exact version (`3.2.1`).
+- `5` is the project version. It can be either a major version (`5`), a minor version (`5.2`) or an exact version (`5.2.1`).
     When a major or minor version is used, the CDN returns the latest appropriate version.
 - `file.js` it the name of a file within the project version.
 
