@@ -153,7 +153,8 @@ export async function buildCodeBody(
  * @internal Exported only for the tests
  */
 export async function getCodeBanner(filePath: string) {
-  const fileContent = await readFirstCharacters(filePath, 1024)
+  // 2048 characters is enough for both MIT license and BUSL-1.1
+  const fileContent = await readFirstCharacters(filePath, 2048)
 
   // The expression matches either a group of //-comments with no empty lines in between, or a /**/ comment.
   // The comments are expected to stand at the start of the file.
