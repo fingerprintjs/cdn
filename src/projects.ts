@@ -71,6 +71,7 @@ const botdRouteCommon = {
 } as const
 
 const fingerprintJsProGtmRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintjsProGTM' } as const
+const fingerprintJsGtmAdapterRouteCommon = { type: 'packageMain', globalVariableName: 'FingerprintGTM' } as const
 
 /**
  * The keys are the first part of the incoming URL. The keys mayn't include slashes.
@@ -140,6 +141,20 @@ export const projects: Record<string, Project> = {
         routes: {
           'iife.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife' },
           'iife.min.js': { ...fingerprintJsProGtmRouteCommon, format: 'iife', minified: true },
+        },
+      },
+    ],
+  },
+
+  // https://github.com/fingerprintjs/gtm-integration
+  'gtm-adapter': {
+    versions: [
+      {
+        npmPackage: '@fingerprint/gtm-adapter',
+        versionRange: { start: '2' },
+        routes: {
+          'iife.js': { ...fingerprintJsGtmAdapterRouteCommon, format: 'iife' },
+          'iife.min.js': { ...fingerprintJsGtmAdapterRouteCommon, format: 'iife', minified: true },
         },
       },
     ],
